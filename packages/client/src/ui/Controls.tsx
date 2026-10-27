@@ -37,7 +37,7 @@ export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: 
       <div class="logo disp">
         WET<b>WIRE</b>
       </div>
-      <div class="district">{game.content.district.name}</div>
+      <div class="district">{game.state.rules.district.name}</div>
       <div class="tickbox">
         <TickRing game={game} />
         <span class="num disp" aria-label="Tick">

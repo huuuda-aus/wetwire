@@ -11,7 +11,9 @@ import { Stage } from './Stage.tsx';
 export function App() {
   const game = useMemo(() => new Game(), []);
   const sfx = useMemo(() => new Sfx(game.prefs.volume), [game]);
-  const [briefOpen, setBriefOpen] = useState(true);
+  // A restored match (game.running already true from a reload) skips the brief so play resumes
+  // straight away; a fresh session still opens on it.
+  const [briefOpen, setBriefOpen] = useState(!game.running);
   useGame(game);
 
   useEffect(
@@ -27,9 +29,9 @@ export function App() {
     sfx.setVolume(game.prefs.volume);
   }, [game.prefs.volume, game, sfx]);
 
-  const start = (payload: string): void => {
+  const start = (payload: string, districtId: string): void => {
     sfx.unlock();
-    game.start(payload, performance.now());
+    game.start(payload, performance.now(), districtId);
     setBriefOpen(false);
   };
 

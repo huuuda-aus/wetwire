@@ -9,9 +9,10 @@ export function StartOverlay({
 }: {
   game: Game;
   open: boolean;
-  onStart: (payload: string) => void;
+  onStart: (payload: string, districtId: string) => void;
 }) {
   const [payload, setPayload] = useState(game.prefs.payload);
+  const [districtId, setDistrictId] = useState(game.state.rules.district.id);
   const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (open) btn.current?.focus();
@@ -65,6 +66,21 @@ export function StartOverlay({
             </label>
           ))}
         </fieldset>
+        <fieldset class="loads" aria-label="District">
+          {game.content.districts.map((d) => (
+            <label key={d.id}>
+              <input
+                type="radio"
+                name="district"
+                value={d.id}
+                checked={districtId === d.id}
+                onChange={() => setDistrictId(d.id)}
+              />
+              <span class="nm disp">{d.name.split('·').pop()?.trim() ?? d.name}</span>
+              <span class="nt">{d.name}</span>
+            </label>
+          ))}
+        </fieldset>
         <div class="howto">
           <div>
             <h4>Street</h4>
@@ -81,7 +97,7 @@ export function StartOverlay({
             <kbd>Space</kbd> / <kbd>Enter</kbd> runs the tick.
           </div>
         </div>
-        <button class="go disp" ref={btn} onClick={() => onStart(payload)}>
+        <button class="go disp" ref={btn} onClick={() => onStart(payload, districtId)}>
           START RUN
         </button>
       </div>

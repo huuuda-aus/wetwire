@@ -12,6 +12,7 @@ import {
   type GameEvent,
   type MatchState,
 } from '@wetwire/sim';
+import { clearMatch, loadMatch, restoreState, saveMatch } from './persist.ts';
 import { loadPrefs, savePrefs, type Prefs } from './prefs.ts';
 
 export type View = 'street' | 'net';
@@ -53,7 +54,16 @@ export class Game {
   constructor(content: Content = shipped, prefs: Prefs = loadPrefs()) {
     this.content = content;
     this.prefs = prefs;
-    this.state = createMatch(content, { payload: prefs.payload }, 0);
+    const saved = loadMatch(content);
+    if (saved) {
+      this.state = restoreState(content, saved);
+      this.plan = saved.plan;
+      this.view = saved.view;
+      this.log = saved.log;
+      this.running = true;
+    } else {
+      this.state = createMatch(content, { payload: prefs.payload }, 0);
+    }
     this.refresh();
   }
 
@@ -73,10 +83,14 @@ export class Game {
     for (const fn of this.listeners) fn();
   }
 
-  start(payload: string, now: number): void {
+  start(payload: string, now: number, districtId?: string): void {
     this.prefs = { ...this.prefs, payload };
     savePrefs(this.prefs);
-    this.state = createMatch(this.content, { payload }, Date.now() >>> 0);
+    this.state = createMatch(
+      this.content,
+      districtId === undefined ? { payload } : { payload, districtId },
+      Date.now() >>> 0,
+    );
     this.plan = freshPlan();
     this.log = [
       {
@@ -84,7 +98,7 @@ export class Game {
         type: 'KadeRouted',
         layer: 'STREET',
         kind: 'info',
-        text: `Contract open. ${this.content.balance.payloads[payload]?.label ?? payload} load.`,
+        text: `Contract open. ${this.content.balance.payloads[payload]?.label ?? payload} load, ${this.state.rules.district.name}.`,
         fx: null,
       },
     ];
@@ -94,6 +108,7 @@ export class Game {
     this.running = true;
     this.view = 'street';
     this.refresh();
+    this.persist();
   }
 
   setPrefs(patch: Partial<Prefs>): void {
@@ -107,18 +122,21 @@ export class Game {
     this.view = view;
     this.version += 1;
     for (const fn of this.listeners) fn();
+    if (this.running) this.persist();
   }
 
   setWrenAction(a: CourierAction | undefined): void {
     if (!a || this.state.status !== 'play' || !this.legalWren.some((l) => sameAction(l, a))) return;
     this.plan = { ...this.plan, wren: a };
     this.refresh();
+    this.persist();
   }
 
   setKadeAction(a: DeckerAction | undefined): void {
     if (!a || this.state.status !== 'play' || !this.legalKade.some((l) => sameAction(l, a))) return;
     this.plan = { ...this.plan, kade: a };
     this.refresh();
+    this.persist();
   }
 
   moveWren(dir: 0 | 1 | 2 | 3): void {
@@ -138,6 +156,14 @@ export class Game {
     this.tickStart = now;
     this.refresh();
     for (const fn of this.eventListeners) fn(result.events);
+    if (this.state.status === 'over') clearMatch();
+    else this.persist();
+  }
+
+  /** Saves just enough to resume after a reload: the match state, the in-progress plan, the
+   * view, and the log. Never called for a match that has already ended. */
+  private persist(): void {
+    saveMatch(this.state, this.plan, this.view, this.log);
   }
 
   /** Fraction of the planning timer left (1 when untimed), auto-committing when it runs out. */
