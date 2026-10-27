@@ -238,6 +238,37 @@ describe('Kade meters', () => {
     s = tick(s, { type: 'wait' }, { type: 'ice', target: 'ICE' }).state;
     expect(s.ice).toBe(0);
   });
+
+  it('lock is only offered for an open door, unlock only for a closed one', () => {
+    const s = fresh();
+    expect(legalDeckerActions(s)).not.toContainEqual({ type: 'lock', target: 'DR2' });
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'unlock', target: 'DR2' });
+    s.doors['DR2'] = true;
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'lock', target: 'DR2' });
+    expect(legalDeckerActions(s)).not.toContainEqual({ type: 'unlock', target: 'DR2' });
+  });
+
+  it('lock closes an open door and is free (no load or trace cost)', () => {
+    const s = fresh();
+    s.doors['DR2'] = true;
+    s.kade.load = 20;
+    s.kade.trace = 10;
+    const r = tick(s, { type: 'wait' }, { type: 'lock', target: 'DR2' }).state;
+    expect(r.doors['DR2']).toBe(false);
+    // no hack this tick, so load/trace only move by the usual decay
+    expect(r.kade.load).toBe(20 - content.balance.net.decay.load);
+    expect(r.kade.trace).toBe(10 - content.balance.net.decay.trace);
+    expect(r.stats.hacks).toBe(0); // locking is not a hack
+  });
+
+  it('a door locked the same tick Wren tries to walk through it blocks her (Net resolves first)', () => {
+    let s = fresh();
+    s.doors['DR2'] = true;
+    s.wren.x = 3;
+    s.wren.y = 8;
+    s = tick(s, { type: 'move', dir: 1 }, { type: 'lock', target: 'DR2' }).state;
+    expect([s.wren.x, s.wren.y]).toEqual([3, 8]); // bumped, same as a door that was never open
+  });
 });
 
 describe('hunters', () => {

@@ -17,6 +17,8 @@ export function deckerLabel(s: MatchState, a: DeckerAction): string {
       return `Blind ${node(a.target)}`;
     case 'unlock':
       return `Unlock ${node(a.target)}`;
+    case 'lock':
+      return `Lock ${node(a.target)}`;
     case 'ice':
       return 'Break ICE';
     case 'burn':

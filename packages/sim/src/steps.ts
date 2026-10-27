@@ -110,6 +110,10 @@ export function stepNet(ctx: TickContext, requested: Action | undefined): void {
   if (a.type === 'route') {
     s.kade.node = a.target;
     emit(ctx, 'KadeRouted', 'NET', 'info', `Kade routes to ${nodeLabel(s, a.target)}`);
+  } else if (a.type === 'lock') {
+    const ctl = must(must(s.rules.nodes[a.target], 'door node').ctl, 'door control');
+    s.doors[ctl] = false;
+    emit(ctx, 'DoorLocked', 'NET', 'info', `Kade locks ${nodeLabel(s, a.target)}`);
   } else if (isHack(a)) applyHack(ctx, a);
 }
 

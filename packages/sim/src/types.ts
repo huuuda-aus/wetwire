@@ -104,7 +104,10 @@ export type HackAction =
   | { type: 'unlock'; target: string }
   | { type: 'ice'; target: string }
   | { type: 'burn'; target: string };
-export type DeckerAction = { type: 'hold' } | { type: 'route'; target: string } | HackAction;
+// Lock has no net.costs entry (§7.3 states a cost for Blind/Unlock/Break ICE/Burn implant but
+// not for Lock) -- free, same bucket as Hold and Route, not a HackAction.
+export type DeckerAction =
+  { type: 'hold' } | { type: 'route'; target: string } | { type: 'lock'; target: string } | HackAction;
 export type RazorAction =
   | { type: 'move'; dir: Dir }
   | { type: 'wait' }
@@ -151,7 +154,8 @@ export type GameEventType =
   | 'HeavyStrikeLanded'
   | 'HeavyStrikeMissed'
   | 'RazorGuarded'
-  | 'RazorBlocked';
+  | 'RazorBlocked'
+  | 'DoorLocked';
 export interface Fx {
   kind: 'hit' | 'spot' | 'bump' | 'hack';
   x: number;

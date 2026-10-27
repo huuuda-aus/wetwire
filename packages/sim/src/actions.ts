@@ -59,12 +59,15 @@ export function legalDeckerActions(s: MatchState): DeckerAction[] {
   const here = must(nodes[k.node], 'kade node');
   const around = neighbours[k.node] ?? [];
   const hacks: HackAction[] = [];
+  const locks: DeckerAction[] = [];
   for (const id of [k.node, ...around]) {
     const def = must(nodes[id], 'node');
     if (def.type === 'camera' && s.cams.some((c) => c.node === id && c.blind === 0))
       hacks.push({ type: 'blind', target: id });
-    if (def.type === 'door' && def.ctl !== null && s.doors[def.ctl] === false)
-      hacks.push({ type: 'unlock', target: id });
+    if (def.type === 'door' && def.ctl !== null) {
+      if (s.doors[def.ctl] === false) hacks.push({ type: 'unlock', target: id });
+      else locks.push({ type: 'lock', target: id });
+    }
     if (def.type === 'ice' && s.ice > 0) hacks.push({ type: 'ice', target: id });
   }
   for (const h of s.hunters) {
@@ -74,7 +77,7 @@ export function legalDeckerActions(s: MatchState): DeckerAction[] {
   const routes: DeckerAction[] = around
     .filter((id) => !(must(nodes[id], 'node').type === 'ice' && s.ice > 0))
     .map((target) => ({ type: 'route', target }));
-  return [...hacks, ...routes, hold];
+  return [...hacks, ...locks, ...routes, hold];
 }
 
 export function legalActions(s: MatchState, player: PlayerId): Action[] {

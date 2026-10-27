@@ -97,8 +97,9 @@ describe('properties', () => {
           if (wa) actions[WREN] = wa;
           if (ka) actions[KADE] = ka;
           const r = resolveTick(s, { actions });
-          // Accepted-as-given: a legal hack always shows up as a hack in the stats.
-          if (ka && ka.type !== 'hold' && ka.type !== 'route')
+          // Accepted-as-given: a legal hack always shows up as a hack in the stats. Hold,
+          // Route and Lock are the free, non-hack decker actions.
+          if (ka && ka.type !== 'hold' && ka.type !== 'route' && ka.type !== 'lock')
             expect(r.state.stats.hacks).toBe(s.stats.hacks + 1);
           s = r.state;
         }
