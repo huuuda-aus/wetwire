@@ -21,7 +21,11 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', new MemoryStorage());
 });
 
-const freshPlan = () => ({ wren: { type: 'wait' as const }, kade: { type: 'hold' as const } });
+const freshPlan = () => ({
+  wren: { type: 'wait' as const },
+  kade: { type: 'hold' as const },
+  razor: { type: 'wait' as const },
+});
 
 describe('match persistence', () => {
   it('round-trips a running match through save and load', () => {

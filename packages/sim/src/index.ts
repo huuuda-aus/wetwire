@@ -2,9 +2,11 @@ export * from './types.ts';
 export {
   WREN,
   KADE,
+  RAZOR,
   legalActions,
   legalCourierActions,
   legalDeckerActions,
+  legalRazorActions,
   costOf,
   isHack,
   sameAction,

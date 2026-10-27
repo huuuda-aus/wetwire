@@ -102,6 +102,9 @@ export class StreetLayer {
   private readonly wrenArc = new Graphics();
   private readonly wrenMask = new Graphics();
   private readonly wrenTag: Text;
+  private readonly razorView = new Container();
+  private readonly razorBody = new Graphics();
+  private readonly razorTag: Text;
   private readonly hunters = new Map<string, HunterView>();
   private readonly beacon = [new Graphics(), new Graphics()];
   private readonly kadeRing = new Graphics();
@@ -130,6 +133,16 @@ export class StreetLayer {
     this.wrenTag.position.set(0, 31);
     this.wrenView.addChild(this.wrenGlow, this.wrenMask, this.wrenArc, this.wrenTag);
     this.unitLayer.addChild(this.wrenView);
+    this.razorTag = new Text({
+      text: 'RAZOR',
+      style: { fontFamily: FONT, fontSize: 8, fontWeight: '500', fill: 0xffffff },
+      resolution: 2,
+    });
+    this.razorTag.anchor.set(0.5);
+    this.razorTag.tint = COLORS.razor;
+    this.razorTag.position.set(0, 27);
+    this.razorView.addChild(this.razorBody, this.razorTag);
+    this.unitLayer.addChild(this.razorView);
     this.rain = new TilingSprite({ texture: rainTexture, width, height });
     this.rain.alpha = 0.5;
     this.root.addChild(this.rain);
@@ -378,6 +391,14 @@ export class StreetLayer {
       }
       this.wrenMask.stroke({ width: 1.5, color: COLORS.fg });
     }
+    this.razorBody.clear();
+    const down = s.razor.body <= 0;
+    diamond(this.razorBody, 0, 0, 10).fill({
+      color: down ? COLORS.stone : COLORS.razor,
+      alpha: down ? 0.5 : 1,
+    });
+    this.razorTag.text = down ? 'RAZOR DOWN' : 'RAZOR';
+    this.razorTag.tint = down ? COLORS.mute : COLORS.razor;
     for (const h of s.hunters) this.syncHunter(h);
   }
 
@@ -398,7 +419,10 @@ export class StreetLayer {
     }
     const stunned = h.stun > 0;
     v.body.clear();
-    v.body.poly([12, 0, -8, -9, -4, 0, -8, 9]).fill(stunned ? COLORS.stone : COLORS.crim);
+    v.body
+      .poly([12, 0, -8, -9, -4, 0, -8, 9])
+      .fill(h.defeated ? COLORS.stone : stunned ? COLORS.stone : COLORS.crim);
+    v.body.alpha = h.defeated ? 0.4 : 1;
     v.body.rotation = Math.atan2(h.fy, h.fx);
     v.zig.clear();
     if (stunned) {
@@ -410,9 +434,17 @@ export class StreetLayer {
         .lineTo(9, -13)
         .stroke({ width: 2, color: COLORS.own });
     }
-    const state = stunned ? ' STUN' : h.mode === 'hunt' ? ' HUNTING' : h.mode === 'body' ? ' TRACING' : '';
+    const state = h.defeated
+      ? ' DOWN'
+      : stunned
+        ? ' STUN'
+        : h.mode === 'hunt'
+          ? ' HUNTING'
+          : h.mode === 'body'
+            ? ' TRACING'
+            : '';
     v.tag.text = `${h.id}${state}`;
-    v.tag.tint = stunned ? COLORS.mute : COLORS.crim;
+    v.tag.tint = h.defeated || stunned ? COLORS.mute : COLORS.crim;
   }
 
   /** Per-frame work: only transforms and alphas, no redraws and no allocation. */
@@ -426,6 +458,7 @@ export class StreetLayer {
       target.position.set(centre(x), centre(y));
     };
     place('wren', s.wren, this.wrenView);
+    place('razor', s.razor, this.razorView);
     for (const h of s.hunters) {
       const v = this.hunters.get(h.id);
       if (v) place(h.id, h, v.root);

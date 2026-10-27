@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import type { Sfx } from '../audio.ts';
 import type { Game } from '../game.ts';
 import type { MotionPref } from '../prefs.ts';
-import { MOVE_KEYS, courierLabel, deckerLabel } from './labels.ts';
+import { MOVE_KEYS, courierLabel, deckerLabel, razorLabel } from './labels.ts';
 
 const RING = 62.8;
 
@@ -108,6 +108,10 @@ export function PlanBar({ game }: { game: Game }) {
         <small>Kade · this tick</small>
         <b>{state.kade.flat ? 'Flatlined' : deckerLabel(state, plan.kade)}</b>
       </div>
+      <div class="slot r">
+        <small>Razor · this tick</small>
+        <b>{state.razor.body <= 0 ? 'Down' : razorLabel(plan.razor)}</b>
+      </div>
       <button
         class="run disp"
         disabled={state.status !== 'play'}
@@ -173,6 +177,22 @@ export function Dpad({ game }: { game: Game }) {
       {btn('w', 3, '◀', 'Move west')}
       {btn('s', 2, '▼', 'Move south')}
       {btn('e', 1, '▶', 'Move east')}
+    </div>
+  );
+}
+
+/** Razor's own small action row: always visible (she shares the Street layer with Wren but has
+ * no view of her own), buttons only — no dedicated keymap yet, that's follow-up work. */
+export function RazorActions({ game }: { game: Game }) {
+  const { plan } = game;
+  if (game.state.razor.body <= 0) return null;
+  return (
+    <div class="actions razoracts" aria-label="Razor's actions">
+      {game.legalRazor.map((a, i) => (
+        <button key={i} class={sameAction(a, plan.razor) ? 'sel' : ''} onClick={() => game.setRazorAction(a)}>
+          {razorLabel(a)}
+        </button>
+      ))}
     </div>
   );
 }

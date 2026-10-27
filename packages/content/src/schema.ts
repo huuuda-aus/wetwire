@@ -145,6 +145,11 @@ export const balanceSchema = z
       memory: z.number().int().positive(),
       stunTicks: z.number().int().min(0),
       hitDamage: z.number().int().positive(),
+      body: z.number().int().positive(),
+    }),
+    razor: z.object({
+      body: z.number().int().positive(),
+      hitDamage: z.number().int().positive(),
     }),
     net: z.object({
       decay: cost,

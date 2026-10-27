@@ -1,16 +1,19 @@
 import { content as shipped, type Content } from '@wetwire/content';
 import {
   KADE,
+  RAZOR,
   WREN,
   createMatch,
   legalCourierActions,
   legalDeckerActions,
+  legalRazorActions,
   resolveTick,
   sameAction,
   type CourierAction,
   type DeckerAction,
   type GameEvent,
   type MatchState,
+  type RazorAction,
 } from '@wetwire/sim';
 import { clearMatch, loadMatch, restoreState, saveMatch } from './persist.ts';
 import { loadPrefs, savePrefs, type Prefs } from './prefs.ts';
@@ -19,6 +22,7 @@ export type View = 'street' | 'net';
 export interface Plan {
   wren: CourierAction;
   kade: DeckerAction;
+  razor: RazorAction;
 }
 export interface Pt {
   x: number;
@@ -27,7 +31,7 @@ export interface Pt {
 export const ANIM_MS = 300;
 export const TIMER_MS = 12000;
 const LOG_LIMIT = 80;
-const freshPlan = (): Plan => ({ wren: { type: 'wait' }, kade: { type: 'hold' } });
+const freshPlan = (): Plan => ({ wren: { type: 'wait' }, kade: { type: 'hold' }, razor: { type: 'wait' } });
 
 /**
  * Client-side store. It owns no rules: it forwards the plan to `resolveTick` and keeps what the UI needs.
@@ -42,6 +46,7 @@ export class Game {
   log: GameEvent[] = [];
   legalWren: CourierAction[] = [];
   legalKade: DeckerAction[] = [];
+  legalRazor: RazorAction[] = [];
   version = 0;
   running = false;
   /** Unit positions before the last resolve, for the 300 ms interpolation. */
@@ -79,6 +84,7 @@ export class Game {
   private refresh(): void {
     this.legalWren = legalCourierActions(this.state);
     this.legalKade = this.state.status === 'play' ? legalDeckerActions(this.state) : [];
+    this.legalRazor = this.state.status === 'play' ? legalRazorActions(this.state) : [];
     this.version += 1;
     for (const fn of this.listeners) fn();
   }
@@ -139,6 +145,17 @@ export class Game {
     this.persist();
   }
 
+  setRazorAction(a: RazorAction | undefined): void {
+    if (!a || this.state.status !== 'play' || !this.legalRazor.some((l) => sameAction(l, a))) return;
+    this.plan = { ...this.plan, razor: a };
+    this.refresh();
+    this.persist();
+  }
+
+  moveRazor(dir: 0 | 1 | 2 | 3): void {
+    this.setRazorAction(this.legalRazor.find((a) => a.type === 'move' && a.dir === dir));
+  }
+
   moveWren(dir: 0 | 1 | 2 | 3): void {
     this.setWrenAction(this.legalWren.find((a) => a.type === 'move' && a.dir === dir));
   }
@@ -147,8 +164,11 @@ export class Game {
     if (!this.running || this.state.status !== 'play') return;
     this.prev.clear();
     this.prev.set(WREN, { x: this.state.wren.x, y: this.state.wren.y });
+    this.prev.set(RAZOR, { x: this.state.razor.x, y: this.state.razor.y });
     for (const h of this.state.hunters) this.prev.set(h.id, { x: h.x, y: h.y });
-    const result = resolveTick(this.state, { actions: { [WREN]: this.plan.wren, [KADE]: this.plan.kade } });
+    const result = resolveTick(this.state, {
+      actions: { [WREN]: this.plan.wren, [KADE]: this.plan.kade, [RAZOR]: this.plan.razor },
+    });
     this.state = result.state;
     this.log = [...result.events.toReversed(), ...this.log].slice(0, LOG_LIMIT);
     this.plan = freshPlan();

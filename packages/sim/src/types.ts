@@ -61,6 +61,14 @@ export interface HunterState extends Pos {
   memory: number;
   stun: number;
   plan: Pos | null;
+  body: number;
+  /** Struck down by Razor. Stays on the map but stops patrolling, hunting, attacking and
+   * alerting — there is no respawn yet (§7.5 territory); permanent for the rest of the match. */
+  defeated: boolean;
+}
+
+export interface RazorState extends Pos {
+  body: number;
 }
 
 export interface MatchState {
@@ -72,6 +80,7 @@ export interface MatchState {
   outcome: Outcome | null;
   wren: WrenState;
   kade: KadeState;
+  razor: RazorState;
   doors: Record<string, boolean>;
   ice: number;
   owned: string[];
@@ -88,7 +97,8 @@ export type HackAction =
   | { type: 'ice'; target: string }
   | { type: 'burn'; target: string };
 export type DeckerAction = { type: 'hold' } | { type: 'route'; target: string } | HackAction;
-export type Action = CourierAction | DeckerAction;
+export type RazorAction = { type: 'move'; dir: Dir } | { type: 'wait' } | { type: 'strike'; target: string };
+export type Action = CourierAction | DeckerAction | RazorAction;
 
 export interface MatchSetup {
   payload: string;
@@ -118,7 +128,11 @@ export type GameEventType =
   | 'CourierHit'
   | 'KadeHit'
   | 'TraceMaxed'
-  | 'ReadOut';
+  | 'ReadOut'
+  | 'RazorStruck'
+  | 'HunterDefeated'
+  | 'RazorHit'
+  | 'RazorDowned';
 export interface Fx {
   kind: 'hit' | 'spot' | 'bump' | 'hack';
   x: number;

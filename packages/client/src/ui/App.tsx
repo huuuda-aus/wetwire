@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Sfx } from '../audio.ts';
 import { Game } from '../game.ts';
 import { attachKeyboard } from '../input.ts';
-import { Actions, Dpad, PlanBar, TopBar } from './Controls.tsx';
+import { Actions, Dpad, PlanBar, RazorActions, TopBar } from './Controls.tsx';
 import { useGame } from './hooks.ts';
 import { EndOverlay, StartOverlay } from './Overlays.tsx';
-import { KadeCard, Legend, LogPanel, WrenCard } from './Panels.tsx';
+import { KadeCard, Legend, LogPanel, RazorCard, WrenCard } from './Panels.tsx';
 import { Stage } from './Stage.tsx';
 
 export function App() {
@@ -44,11 +44,13 @@ export function App() {
         <aside class="left" aria-label="Crew status">
           <WrenCard game={game} />
           <KadeCard game={game} />
+          <RazorCard game={game} />
         </aside>
         <section class="center">
           <Stage game={game} sfx={sfx} />
           <PlanBar game={game} />
           <Actions game={game} />
+          <RazorActions game={game} />
           <Dpad game={game} />
         </section>
         <aside class="right">

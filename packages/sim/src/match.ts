@@ -1,4 +1,4 @@
-import { KADE, WREN } from './actions.ts';
+import { KADE, RAZOR, WREN } from './actions.ts';
 import { camFacing } from './geometry.ts';
 import { validateLoadout } from './loadout.ts';
 import {
@@ -10,6 +10,7 @@ import {
   stepMeters,
   stepNet,
   stepNext,
+  stepRazor,
   stepSight,
   stepWren,
   type TickContext,
@@ -92,6 +93,9 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
       flat: false,
       loadout: kadeLoadout,
     },
+    // No dedicated spawn marker in district content yet (§ decisions): Razor starts at Wren's
+    // own start tile.
+    razor: { x: district.wrenStart.x, y: district.wrenStart.y, body: balance.razor.body },
     doors: Object.fromEntries(district.doors.map((d) => [d.id, false])),
     ice: balance.net.iceLayers,
     owned: [],
@@ -116,6 +120,8 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
         memory: 0,
         stun: 0,
         plan: null,
+        body: balance.hunter.body,
+        defeated: false,
       };
     }),
     download: 0,
@@ -131,6 +137,7 @@ function cloneState(s: MatchState): MatchState {
     ...s,
     wren: { ...s.wren },
     kade: { ...s.kade },
+    razor: { ...s.razor },
     doors: { ...s.doors },
     owned: [...s.owned],
     cams: s.cams.map((c) => ({ ...c })),
@@ -149,6 +156,7 @@ export function resolveTick(prev: MatchState, input: TickInput): TickResult {
   const ctx: TickContext = { s: cloneState(prev), events: [], hacked: false };
   stepNet(ctx, input.actions[KADE]);
   stepWren(ctx, input.actions[WREN]);
+  stepRazor(ctx, input.actions[RAZOR]);
   stepHunters(ctx);
   stepCameras(ctx);
   stepSight(ctx);

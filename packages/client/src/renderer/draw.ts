@@ -11,6 +11,7 @@ export const COLORS = {
   net: 0x5ee0ff,
   own: 0xb98cff,
   stone: 0x6b6b70,
+  razor: 0xff8c42,
 } as const;
 export const FONT = '"Martian Mono", ui-monospace, monospace';
 export const TAU = Math.PI * 2;

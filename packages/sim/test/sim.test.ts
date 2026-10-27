@@ -2,11 +2,13 @@ import { content } from '@wetwire/content';
 import { describe, expect, it } from 'vitest';
 import {
   KADE,
+  RAZOR,
   WREN,
   createMatch,
   distField,
   legalActions,
   legalDeckerActions,
+  legalRazorActions,
   loadoutSlotCost,
   resolveTick,
   telegraphs,
@@ -21,6 +23,8 @@ import {
 const fresh = (payload = 'standard'): MatchState => createMatch(content, { payload }, 1);
 const tick = (s: MatchState, wren: Action, kade: Action) =>
   resolveTick(s, { actions: { [WREN]: wren, [KADE]: kade } });
+const tickR = (s: MatchState, wren: Action, kade: Action, razor: Action) =>
+  resolveTick(s, { actions: { [WREN]: wren, [KADE]: kade, [RAZOR]: razor } });
 const route = (s: MatchState, dr1: boolean, dr2: boolean): number => {
   const copy: MatchState = { ...s, doors: { DR1: dr1, DR2: dr2 } };
   const field = distField(copy, [s.rules.district.receiver], false);
@@ -282,6 +286,94 @@ describe('hunters', () => {
     // At tick 2 every camera is mid-pose; at tick 2 -> 3 they all turn.
     const next = tick(s, { type: 'wait' }, { type: 'hold' }).state;
     expect(telegraphs(next).filter((x) => x.kind === 'cameraTurn')).toHaveLength(3);
+  });
+});
+
+describe('Razor', () => {
+  it('spawns at Wren’s start tile with the role kit’s body', () => {
+    const s = fresh();
+    expect(s.razor).toEqual({ x: s.wren.x, y: s.wren.y, body: content.balance.razor.body });
+  });
+
+  it('strike only offers hunters that are adjacent and not already defeated', () => {
+    const s = fresh();
+    expect(legalRazorActions(s).some((a) => a.type === 'strike')).toBe(false);
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    expect(legalRazorActions(s)).toContainEqual({ type: 'strike', target: 'H-1' });
+    h.defeated = true;
+    expect(legalRazorActions(s).some((a) => a.type === 'strike' && a.target === 'H-1')).toBe(false);
+  });
+
+  it('a strike damages the target and is logged', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'strike', target: 'H-1' });
+    expect(hunter(r.state, 'H-1').body).toBe(content.balance.hunter.body - content.balance.razor.hitDamage);
+    expect(r.events.some((e) => e.type === 'RazorStruck')).toBe(true);
+  });
+
+  it('a hunter reduced to 0 body is defeated and stops acting for the rest of the match', () => {
+    let s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    h.body = content.balance.razor.hitDamage; // one strike away from 0
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'strike', target: 'H-1' });
+    s = r.state;
+    expect(hunter(s, 'H-1').defeated).toBe(true);
+    expect(r.events.some((e) => e.type === 'HunterDefeated')).toBe(true);
+    const start = { x: hunter(s, 'H-1').x, y: hunter(s, 'H-1').y };
+    s = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect({ x: hunter(s, 'H-1').x, y: hunter(s, 'H-1').y }).toEqual(start); // never moves again
+    expect(legalRazorActions(s).some((a) => a.type === 'strike')).toBe(false); // can't be struck again
+  });
+
+  it('a defeated hunter does not alert, hunt, or attack', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.defeated = true;
+    h.x = s.wren.x;
+    h.y = s.wren.y - 1; // adjacent to Wren; would normally hit her
+    h.plan = null;
+    const r = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect(r.wren.body).toBe(s.wren.body); // untouched
+  });
+
+  it('a hunter adjacent to Razor (but not Wren) hits her and is stunned, same as the Wren rule', () => {
+    const s = fresh();
+    s.wren.x = 0; // move Wren out of range so the hunter's only adjacent target is Razor
+    s.wren.y = 0;
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    const r = tick(s, { type: 'wait' }, { type: 'hold' });
+    expect(r.state.razor.body).toBe(content.balance.razor.body - content.balance.hunter.hitDamage);
+    // stepMeters decrements stun once in the same tick it's set, same as the Wren-hit case above.
+    expect(hunter(r.state, 'H-1').stun).toBe(content.balance.hunter.stunTicks - 1);
+    expect(r.events.some((e) => e.type === 'RazorHit')).toBe(true);
+  });
+
+  it('a downed Razor (body 0) can only wait, and it does not end the match', () => {
+    const s = fresh();
+    s.razor.body = 0;
+    expect(legalRazorActions(s)).toEqual([{ type: 'wait' }]);
+    const r = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect(r.status).toBe('play');
+  });
+
+  it('Razor moves like any other street unit and bumps into walls', () => {
+    const s = fresh();
+    const legal = legalRazorActions(s);
+    expect(legal.some((a) => a.type === 'wait')).toBe(true);
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'move', dir: 1 }).state;
+    expect([r.razor.x, r.razor.y]).toEqual([s.razor.x + 1, s.razor.y]);
   });
 });
 

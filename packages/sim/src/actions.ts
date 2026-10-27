@@ -1,19 +1,43 @@
 import type { Cost } from '@wetwire/content';
 import { dirVec, isWall, manhattan } from './geometry.ts';
-import type { Action, CourierAction, DeckerAction, Dir, HackAction, MatchState, PlayerId } from './types.ts';
+import type {
+  Action,
+  CourierAction,
+  DeckerAction,
+  Dir,
+  HackAction,
+  MatchState,
+  PlayerId,
+  RazorAction,
+} from './types.ts';
 import { must } from './util.ts';
 
 export const WREN: PlayerId = 'wren';
 export const KADE: PlayerId = 'kade';
+export const RAZOR: PlayerId = 'razor';
 
-const COURIER_DIRS: readonly Dir[] = [0, 1, 2, 3];
+const DIRS4: readonly Dir[] = [0, 1, 2, 3];
 
 export function legalCourierActions(s: MatchState): CourierAction[] {
-  const moves: CourierAction[] = COURIER_DIRS.filter((d) => {
+  const moves: CourierAction[] = DIRS4.filter((d) => {
     const [dx, dy] = dirVec(d);
     return !isWall(s.rules, s.wren.x + dx, s.wren.y + dy);
   }).map((dir) => ({ type: 'move', dir }));
   return [...moves, { type: 'wait' }, { type: 'mask' }];
+}
+
+export function legalRazorActions(s: MatchState): RazorAction[] {
+  // body <= 0: downed, not dead — she simply can't act for the rest of the match (no respawn
+  // system yet, §7.5). This never ends the match: only the payload's own outcomes do that.
+  if (s.razor.body <= 0) return [{ type: 'wait' }];
+  const moves: RazorAction[] = DIRS4.filter((d) => {
+    const [dx, dy] = dirVec(d);
+    return !isWall(s.rules, s.razor.x + dx, s.razor.y + dy);
+  }).map((dir) => ({ type: 'move', dir }));
+  const strikes: RazorAction[] = s.hunters
+    .filter((h) => !h.defeated && manhattan(h, s.razor) <= 1)
+    .map((h) => ({ type: 'strike', target: h.id }));
+  return [...moves, ...strikes, { type: 'wait' }];
 }
 
 export function legalDeckerActions(s: MatchState): DeckerAction[] {
@@ -47,6 +71,7 @@ export function legalActions(s: MatchState, player: PlayerId): Action[] {
   if (s.status !== 'play') return [];
   if (player === WREN) return legalCourierActions(s);
   if (player === KADE) return legalDeckerActions(s);
+  if (player === RAZOR) return legalRazorActions(s);
   return [];
 }
 

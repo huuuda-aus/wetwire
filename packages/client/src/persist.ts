@@ -5,6 +5,7 @@ import {
   type DeckerAction,
   type GameEvent,
   type MatchState,
+  type RazorAction,
 } from '@wetwire/sim';
 
 const KEY = 'wetwire.match';
@@ -16,6 +17,7 @@ const VERSION = 1;
 export interface PersistedPlan {
   wren: CourierAction;
   kade: DeckerAction;
+  razor: RazorAction;
 }
 export type PersistedView = 'street' | 'net';
 

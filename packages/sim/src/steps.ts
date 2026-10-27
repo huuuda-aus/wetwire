@@ -1,6 +1,13 @@
 // The tick, in the exact order of PROMPT.md §3.6. Later phases insert steps; they never reorder these
 // without a docs/DECISIONS.md entry.
-import { costOf, isHack, legalCourierActions, legalDeckerActions, sameAction } from './actions.ts';
+import {
+  costOf,
+  isHack,
+  legalCourierActions,
+  legalDeckerActions,
+  legalRazorActions,
+  sameAction,
+} from './actions.ts';
 import { loadoutSlotCost } from './loadout.ts';
 import {
   bodyApproachTiles,
@@ -131,11 +138,43 @@ export function stepWren(ctx: TickContext, requested: Action | undefined): void 
   }
 }
 
+/** Step 2.5 (new in Phase 4, documented insertion — never reorders the original §3.6 steps):
+ * Razor's strike, resolved before anyone moves, same as Kade's hacks land before Wren's move. */
+export function stepRazor(ctx: TickContext, requested: Action | undefined): void {
+  const { s } = ctx;
+  const r = s.razor;
+  const a = legalRazorActions(s).find((l) => sameAction(l, requested)) ?? { type: 'wait' as const };
+  if (a.type === 'move') {
+    const [dx, dy] = dirVec(a.dir);
+    if (passable(s, r.x + dx, r.y + dy)) {
+      r.x += dx;
+      r.y += dy;
+    }
+  } else if (a.type === 'strike') {
+    const h = s.hunters.find((x) => x.id === a.target);
+    if (!h || h.defeated) return;
+    h.body -= s.rules.balance.razor.hitDamage;
+    emit(ctx, 'RazorStruck', 'STREET', 'good', `Razor strikes ${h.id} (body ${Math.max(0, h.body)})`, {
+      kind: 'hit',
+      x: h.x,
+      y: h.y,
+      cam: null,
+    });
+    if (h.body <= 0) {
+      h.defeated = true;
+      h.mode = 'patrol';
+      h.target = null;
+      h.plan = null;
+      emit(ctx, 'HunterDefeated', 'STREET', 'good', `${h.id} is taken down`);
+    }
+  }
+}
+
 /** Step 3: each unstunned hunter takes exactly the step it telegraphed. */
 export function stepHunters(ctx: TickContext): void {
   const { s } = ctx;
   for (const h of s.hunters) {
-    if (h.stun > 0 || !h.plan || !passable(s, h.plan.x, h.plan.y)) continue;
+    if (h.defeated || h.stun > 0 || !h.plan || !passable(s, h.plan.x, h.plan.y)) continue;
     h.fx = h.plan.x - h.x;
     h.fy = h.plan.y - h.y;
     h.x = h.plan.x;
@@ -164,7 +203,7 @@ export function stepCameras(ctx: TickContext): void {
       y: s.wren.y,
       cam: cam.id,
     });
-    for (const h of s.hunters) if (h.mode !== 'body') alert(s, h);
+    for (const h of s.hunters) if (h.mode !== 'body' && !h.defeated) alert(s, h);
   });
 }
 
@@ -172,7 +211,7 @@ export function stepCameras(ctx: TickContext): void {
 export function stepSight(ctx: TickContext): void {
   const { s } = ctx;
   for (const h of s.hunters) {
-    if (h.stun > 0 || h.mode === 'body') continue;
+    if (h.defeated || h.stun > 0 || h.mode === 'body') continue;
     if (hunterSees(s, h)) {
       if (h.mode !== 'hunt') emit(ctx, 'HunterSpotted', 'STREET', 'bad', `${h.id} spots Wren`);
       alert(s, h);
@@ -211,12 +250,27 @@ function hitKade(ctx: TickContext, h: HunterState): void {
   emit(ctx, 'KadeHit', 'STREET', 'bad', text, { kind: 'hit', x: t.x, y: t.y, cam: null });
 }
 
-/** Step 6. */
+function hitRazor(ctx: TickContext, h: HunterState): void {
+  const { s } = ctx;
+  const { hunter } = s.rules.balance;
+  s.razor.body -= hunter.hitDamage;
+  h.stun = hunter.stunTicks;
+  emit(ctx, 'RazorHit', 'STREET', 'bad', `${h.id} hits Razor (body ${Math.max(0, s.razor.body)})`, {
+    kind: 'hit',
+    x: s.razor.x,
+    y: s.razor.y,
+    cam: null,
+  });
+  if (s.razor.body <= 0) emit(ctx, 'RazorDowned', 'STREET', 'bad', 'Razor is down');
+}
+
+/** Step 6. A hunter attacks whoever it is adjacent to, preferring Wren (the original rule,
+ * unchanged), then Razor, then Kade's body if it was already heading there. */
 export function stepAttacks(ctx: TickContext): void {
   const { s } = ctx;
   const { hunter } = s.rules.balance;
   for (const h of s.hunters) {
-    if (h.stun > 0) continue;
+    if (h.defeated || h.stun > 0) continue;
     if (manhattan(h, s.wren) <= 1) {
       s.wren.body -= hunter.hitDamage;
       h.stun = hunter.stunTicks;
@@ -226,6 +280,8 @@ export function stepAttacks(ctx: TickContext): void {
         y: s.wren.y,
         cam: null,
       });
+    } else if (s.razor.body > 0 && manhattan(h, s.razor) <= 1) {
+      hitRazor(ctx, h);
     } else if (h.mode === 'body' && !s.kade.flat && manhattan(h, s.rules.district.terminal) <= 1)
       hitKade(ctx, h);
   }
@@ -238,6 +294,7 @@ function sendBodyHunter(ctx: TickContext): void {
   let best: HunterState | null = null;
   let bestDist = Infinity;
   for (const h of s.hunters) {
+    if (h.defeated) continue;
     const d = distAt(s, field, h.x, h.y);
     if (d >= 0 && d < bestDist) {
       best = h;
@@ -318,6 +375,10 @@ function planPatrol(s: MatchState, h: HunterState): { x: number; y: number } | n
 export function planHunters(s: MatchState): void {
   const terminal = s.rules.district.terminal;
   for (const h of s.hunters) {
+    if (h.defeated) {
+      h.plan = null;
+      continue;
+    }
     if (h.mode === 'patrol') h.plan = planPatrol(s, h);
     else if (h.mode === 'hunt') h.plan = h.target ? stepToward(s, h, [h.target]) : null;
     else h.plan = manhattan(h, terminal) <= 1 ? null : stepToward(s, h, bodyApproachTiles(s));
