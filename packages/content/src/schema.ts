@@ -111,6 +111,11 @@ export const balanceSchema = z
       bodyHitShock: z.number().int().positive(),
       bodyHitLoadFloor: z.number().min(0),
     }),
+    neural: z.object({
+      capacity: positive,
+      attenuationTicks: z.number().int().positive(),
+      attenuationEvery: z.number().int().positive(),
+    }),
     downloadTicks: z.number().int().positive(),
     fee: z.object({ base: z.number().min(0), perBody: z.number().min(0), round: positive }),
     defaultPayload: z.string(),
@@ -120,3 +125,69 @@ export const balanceSchema = z
 export type Balance = z.infer<typeof balanceSchema>;
 export type Payload = z.infer<typeof payloadSchema>;
 export type Cost = z.infer<typeof cost>;
+
+// --- Phase 4: roles and implants (PROMPT.md §7.3, §7.4) ---------------------------------------
+// Numbers here are the only tunables for a signature action's cost; `effect` is flavour text,
+// never a number a rule depends on (CLAUDE.md: no magic numbers in logic).
+
+const channelSchema = z.enum(['meat', 'net', 'ghost']);
+
+const roleActionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  // Movement and logistics actions (Sprint, Dead drop, Relocate…) carry no channel: the
+  // combat triangle (§7.1) only classifies Meat/Net/Ghost tools, not every signature action.
+  channel: channelSchema.nullable(),
+  effect: z.string().min(1),
+  windupTicks: z.number().int().min(0).optional(),
+  loadCost: z.number().min(0).optional(),
+});
+
+const roleSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  body: z.number().int().positive(),
+  baseMove: z.number().int().positive(),
+  canSprint: z.boolean(),
+  passive: z.string().min(1),
+  actions: z.array(roleActionSchema).min(1),
+});
+
+function checkRoles(roles: Role[], ctx: z.RefinementCtx): void {
+  const seen = new Set<string>();
+  for (const role of roles) {
+    if (seen.has(role.id)) ctx.addIssue({ code: 'custom', message: `duplicate role id "${role.id}"` });
+    seen.add(role.id);
+    const actionIds = new Set<string>();
+    for (const a of role.actions) {
+      if (actionIds.has(a.id)) {
+        ctx.addIssue({ code: 'custom', message: `role "${role.id}" has a duplicate action id "${a.id}"` });
+      }
+      actionIds.add(a.id);
+    }
+  }
+}
+
+export const rolesSchema = z.array(roleSchema).min(1).superRefine(checkRoles);
+export type Role = z.infer<typeof roleSchema>;
+export type RoleAction = z.infer<typeof roleActionSchema>;
+export type Channel = z.infer<typeof channelSchema>;
+
+const implantSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  slotCost: z.number().int().positive(),
+  effect: z.string().min(1),
+  tradeoff: z.string().min(1),
+});
+
+function checkImplants(implants: Implant[], ctx: z.RefinementCtx): void {
+  const seen = new Set<string>();
+  for (const i of implants) {
+    if (seen.has(i.id)) ctx.addIssue({ code: 'custom', message: `duplicate implant id "${i.id}"` });
+    seen.add(i.id);
+  }
+}
+
+export const implantsSchema = z.array(implantSchema).min(1).superRefine(checkImplants);
+export type Implant = z.infer<typeof implantSchema>;

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "razor-nails",
+    "name": "Razor nails",
+    "slotCost": 15,
+    "effect": "Strike +1 damage",
+    "tradeoff": "A burn disables them for 3 ticks"
+  },
+  {
+    "id": "mono-whip",
+    "name": "Mono-whip",
+    "slotCost": 20,
+    "effect": "Strike reaches 2 tiles",
+    "tradeoff": "1-tick wind-up, visible to anyone who can see the attacker"
+  },
+  {
+    "id": "mirrorshades",
+    "name": "Mirrorshades",
+    "slotCost": 10,
+    "effect": "+1 vision radius; see camera cones",
+    "tradeoff": "Blinding a camera near you also blinds you for 1 tick"
+  },
+  {
+    "id": "dermal-plating",
+    "name": "Dermal plating",
+    "slotCost": 20,
+    "effect": "The first hit each match is blocked",
+    "tradeoff": "-1 sprint distance"
+  },
+  {
+    "id": "quiet-heart",
+    "name": "Quiet heart",
+    "slotCost": 15,
+    "effect": "Mask costs 5 load instead of 10",
+    "tradeoff": "Overload rate +0.5"
+  },
+  {
+    "id": "signal-baffle",
+    "name": "Signal baffle",
+    "slotCost": 15,
+    "effect": "Payload signal radius -2",
+    "tradeoff": "Cannot dead drop"
+  },
+  {
+    "id": "ice-pick-deck",
+    "name": "Ice-pick deck",
+    "slotCost": 20,
+    "effect": "Break ICE removes 2 layers instead of 1",
+    "tradeoff": "Trace +5 per hack"
+  },
+  {
+    "id": "ghost-deck",
+    "name": "Ghost deck",
+    "slotCost": 20,
+    "effect": "Hacks add half trace",
+    "tradeoff": "Hacks cost +5 load"
+  },
+  {
+    "id": "spine-relay",
+    "name": "Spine relay",
+    "slotCost": 15,
+    "effect": "Jack in / out is free (0 ticks)",
+    "tradeoff": "Dumpshock lasts +1 tick"
+  }
+]

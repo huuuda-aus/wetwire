@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import balanceJson from '../data/balance.json' with { type: 'json' };
 import districtJson from '../data/ironbridge-dock-row.json' with { type: 'json' };
+import implantsJson from '../data/implants.json' with { type: 'json' };
+import rolesJson from '../data/roles.json' with { type: 'json' };
 import { content, parseContent } from '../src/index.ts';
 
 const clone = <T>(v: T): T => structuredClone(v);
@@ -36,5 +38,48 @@ describe('content validation', () => {
     const badDefault = clone(balanceJson);
     badDefault.defaultPayload = 'gigantic';
     expect(() => parseContent(districtJson, badDefault)).toThrow(/defaultPayload/);
+  });
+
+  it('loads the six role kits and nine implants, each with a positive neural cost', () => {
+    expect(content.roles).toHaveLength(6);
+    expect(content.roles.map((r) => r.id).sort()).toEqual(
+      ['courier', 'decker', 'fixer', 'hunter', 'razor', 'receiver'].sort(),
+    );
+    expect(content.implants).toHaveLength(9);
+    for (const implant of content.implants) expect(implant.slotCost).toBeGreaterThan(0);
+    expect(content.balance.neural.capacity).toBe(100);
+  });
+
+  it('rejects two roles that share an id', () => {
+    const bad = clone(rolesJson);
+    const [first, second] = bad;
+    if (!first || !second) throw new Error('roles.json needs at least two roles for this test');
+    second.id = first.id;
+    expect(() => parseContent(districtJson, balanceJson, bad, implantsJson)).toThrow(/duplicate role id/);
+  });
+
+  it('rejects two actions on the same role sharing an id', () => {
+    const bad = clone(rolesJson);
+    const [role] = bad;
+    const [first, second] = role?.actions ?? [];
+    if (!first || !second) throw new Error('the first role needs at least two actions for this test');
+    second.id = first.id;
+    expect(() => parseContent(districtJson, balanceJson, bad, implantsJson)).toThrow(/duplicate action id/);
+  });
+
+  it('rejects two implants that share an id', () => {
+    const bad = clone(implantsJson);
+    const [first, second] = bad;
+    if (!first || !second) throw new Error('implants.json needs at least two implants for this test');
+    second.id = first.id;
+    expect(() => parseContent(districtJson, balanceJson, rolesJson, bad)).toThrow(/duplicate implant id/);
+  });
+
+  it('rejects an implant with a non-positive slot cost', () => {
+    const bad = clone(implantsJson);
+    const [first] = bad;
+    if (!first) throw new Error('implants.json needs at least one implant for this test');
+    first.slotCost = 0;
+    expect(() => parseContent(districtJson, balanceJson, rolesJson, bad)).toThrow();
   });
 });

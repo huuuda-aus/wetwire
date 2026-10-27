@@ -25,6 +25,7 @@
     "bodyHitShock": 4,
     "bodyHitLoadFloor": 70
   },
+  "neural": { "capacity": 100, "attenuationTicks": 3, "attenuationEvery": 2 },
   "downloadTicks": 2,
   "fee": { "base": 0.55, "perBody": 0.15, "round": 100 },
   "defaultPayload": "standard",
