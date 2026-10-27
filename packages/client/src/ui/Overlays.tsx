@@ -156,7 +156,17 @@ export function EndOverlay({ game, onAgain }: { game: Game; onAgain: () => void 
           {tile('Camera alerts', state.stats.alerts)}
           {tile('Hacks', state.stats.hacks)}
         </div>
-        <button class="go disp" ref={btn} onClick={onAgain}>
+        <button
+          class="go disp"
+          ref={btn}
+          onClick={() => {
+            // This overlay stays "open" until a new match actually starts (game.state.status
+            // is still 'over' right now), so it must close itself or it sits on top of the
+            // start screen onAgain is about to reveal.
+            setOpen(false);
+            onAgain();
+          }}
+        >
           RUN IT AGAIN
         </button>
       </div>
