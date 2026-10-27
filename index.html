@@ -1,0 +1,1313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wetwire — Ironbridge Sprawl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Martian+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0c0d0f;--panel:#131418;--line:#2a2b31;--fg:#dcd8cf;--mute:#8b877e;--amber:#f0b43c;--crim:#e0464e;--net:#5ee0ff;--own:#b98cff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--fg)}
+body{font:400 12.5px/1.5 'Martian Mono',ui-monospace,Menlo,Consolas,monospace;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--net);outline-offset:2px}
+.disp{font-family:'Big Shoulders Display','Arial Narrow',sans-serif;font-weight:900}
+.top{display:flex;align-items:center;gap:18px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--panel)}
+.logo{font-size:28px;letter-spacing:.08em;line-height:1}
+.logo b{color:var(--amber);font-weight:900}
+.district{color:var(--mute);text-transform:uppercase;letter-spacing:.14em;font-size:11px}
+.tickbox{display:flex;align-items:center;gap:8px}
+.tickbox .num{font-size:26px;line-height:1;min-width:2ch;text-align:right}
+.ring{width:26px;height:26px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:3}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--amber);stroke-dasharray:62.8;stroke-dashoffset:62.8}
+.chk{display:flex;gap:6px;align-items:center;color:var(--mute);cursor:pointer}
+.chk input{accent-color:var(--amber)}
+.spacer{flex:1}
+.seg{display:flex;border:1px solid var(--line)}
+.seg button{background:transparent;border:0;padding:6px 12px;color:var(--mute);text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+.seg button[aria-pressed=true]{background:var(--net);color:#04141a;font-weight:600}
+.seg button[data-v=street][aria-pressed=true]{background:var(--fg);color:#111}
+.btn{background:transparent;border:1px solid var(--line);padding:6px 12px;text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+.btn:hover{border-color:var(--mute)}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr) 280px;gap:14px;padding:14px 16px;max-width:1560px;margin:0 auto}
+.left{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);padding:12px}
+.card h2{margin:0 0 8px;font-size:22px;letter-spacing:.06em;display:flex;justify-content:space-between;align-items:baseline}
+.card h2 small{font:400 10px 'Martian Mono';color:var(--mute);letter-spacing:.14em;text-transform:uppercase}
+.card.wren h2{color:var(--amber)}
+.card.kade h2{color:var(--net)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0 3px;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.row b{color:var(--fg);font-weight:500}
+.pips{display:flex;gap:4px}
+.pip{width:14px;height:14px;border:1px solid var(--mute);transform:rotate(45deg) scale(.8)}
+.pip.on{background:var(--amber);border-color:var(--amber)}
+.kade .pip.on{background:var(--net);border-color:var(--net)}
+.meter{height:8px;background:var(--line);position:relative;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--amber)}
+.meter.net i{background:var(--net)}
+.meter.hot i{background:var(--crim)}
+.meter::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(0,0,0,.45) 9px 10px)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;min-height:22px}
+.chip{border:1px solid var(--line);padding:1px 7px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.chip.bad{border-color:var(--crim);color:var(--crim)}
+.chip.bad::before{content:'▲ '}
+.chip.good{border-color:var(--amber);color:var(--amber)}
+.chip.net{border-color:var(--net);color:var(--net)}
+.chip.own{border-color:var(--own);color:var(--own)}
+.shake{animation:shake .25s linear infinite}
+@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(1px,-1px)}75%{transform:translate(-1px,1px)}}
+.center{min-width:0}
+.stage{position:relative;width:100%;aspect-ratio:704/484;background:#000;border:1px solid var(--line)}
+.stage canvas#view{width:100%;height:100%;display:block;touch-action:manipulation}
+.hint{position:absolute;left:8px;top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);background:rgba(0,0,0,.55);padding:2px 8px;pointer-events:none}
+#pip{position:absolute;right:8px;bottom:8px;width:30%;aspect-ratio:7/5;border:2px solid var(--net);background:#000;display:none}
+#pip.show{display:block}
+#pip.alert{border-color:var(--crim);animation:pipPulse 1s ease-in-out infinite}
+@keyframes pipPulse{50%{box-shadow:0 0 14px var(--crim)}}
+.planbar{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:10px;align-items:stretch}
+.slot{background:var(--panel);border:1px solid var(--line);padding:7px 10px;min-width:0}
+.slot small{display:block;color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.12em}
+.slot.w b{color:var(--amber)} .slot.k b{color:var(--net)}
+.slot b{font-weight:500}
+.run{background:var(--amber);color:#1a1200;border:0;padding:0 22px;font-size:22px;letter-spacing:.08em}
+.run:hover{filter:brightness(1.1)}
+.run:disabled{opacity:.4;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.actions button{background:var(--panel);border:1px solid var(--line);padding:7px 10px;text-align:left;display:flex;gap:8px;align-items:baseline}
+.actions button:hover:not(:disabled){border-color:var(--mute)}
+.actions button.sel{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
+.actions.netacts button.sel{border-color:var(--net);box-shadow:inset 0 0 0 1px var(--net)}
+.actions kbd{border:1px solid var(--mute);padding:0 5px;font:inherit;font-size:10px;color:var(--fg);border-radius:2px}
+.actions .cost{color:var(--mute);font-size:10px}
+.actions .warn{color:var(--crim);font-size:10px;text-transform:uppercase}
+.actions .warn::before{content:'▲ '}
+.dpad{display:none;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,44px);gap:6px;margin:10px auto 0;justify-content:center}
+.dpad button{background:var(--panel);border:1px solid var(--line);font-size:18px}
+.dpad .n{grid-column:2}.dpad .w{grid-row:2;grid-column:1}.dpad .s{grid-row:2;grid-column:2}.dpad .e{grid-row:2;grid-column:3}
+.right{display:flex;flex-direction:column;gap:12px;min-width:0}
+.right h3{margin:0 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:500}
+#log{list-style:none;margin:0;padding:0;max-height:430px;overflow:auto;font-size:11px}
+#log li{padding:4px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:3ch 5ch 1fr;gap:6px}
+#log .t{color:var(--mute)} #log .tag{color:var(--mute);font-size:9px;padding-top:1px}
+#log li.bad .m{color:var(--crim)} #log li.good .m{color:var(--amber)}
+#log li.net .tag{color:var(--net)}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11px;color:var(--mute)}
+.legend i{width:12px;height:12px;display:inline-block;margin-top:3px}
+.ov{position:fixed;inset:0;background:rgba(6,7,9,.94);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto;z-index:10}
+.ov.show{display:flex}
+.ov .box{max-width:860px;width:100%}
+.eyebrow{color:var(--mute);letter-spacing:.3em;text-transform:uppercase;font-size:11px}
+.huge{font-size:clamp(64px,13vw,132px);line-height:.9;letter-spacing:.04em;margin:6px 0 14px}
+.huge b{color:var(--amber);font-weight:900}
+.ov p{max-width:62ch;color:var(--fg)}
+.ov p.dim{color:var(--mute)}
+.loads{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border:0;padding:0;margin:18px 0}
+.loads label{border:1px solid var(--line);background:var(--panel);padding:10px 12px;cursor:pointer;display:block}
+.loads input{position:absolute;opacity:0}
+.loads label:has(input:checked){border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
+.loads label:has(input:focus-visible){outline:2px solid var(--net);outline-offset:2px}
+.loads .nm{font-size:24px;display:block}
+.loads .ln{display:flex;justify-content:space-between;color:var(--mute);font-size:11px}
+.loads .ln b{color:var(--fg);font-weight:500}
+.loads .nt{display:block;color:var(--mute);font-size:10.5px;margin-top:6px}
+.howto{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px;font-size:11.5px;color:var(--mute)}
+.howto h4{margin:0 0 6px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--fg)}
+.howto kbd{border:1px solid var(--mute);padding:0 5px;font:inherit;color:var(--fg);border-radius:2px}
+.howto div:nth-child(2) h4{color:var(--net)}
+.go{background:var(--amber);color:#1a1200;border:0;padding:12px 30px;font-size:26px;letter-spacing:.1em}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0 22px}
+.stat{background:var(--panel);border:1px solid var(--line);padding:10px 12px}
+.stat small{display:block;color:var(--mute);text-transform:uppercase;letter-spacing:.12em;font-size:10px}
+.stat b{font-size:30px;font-weight:900;font-family:'Big Shoulders Display',sans-serif}
+.end-ok{color:var(--amber)} .end-bad{color:var(--crim)}
+@media (max-width:1100px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .center{order:1}.left{order:2;display:grid;grid-template-columns:1fr 1fr}.right{order:3}
+}
+@media (max-width:620px){
+  .left{grid-template-columns:1fr}
+  .dpad{display:grid}
+  .planbar{grid-template-columns:1fr 1fr}.run{grid-column:1/-1;padding:10px}
+  .loads,.howto,.stats{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .top{gap:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  .shake,#pip.alert{animation:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo disp">WET<b>WIRE</b></div>
+  <div class="district">Ironbridge Sprawl · Dock Row</div>
+  <div class="tickbox" aria-label="Tick counter">
+    <svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="bg" cx="12" cy="12" r="10"/><circle class="fg" id="ringfg" cx="12" cy="12" r="10"/></svg>
+    <span class="num disp" id="tickNum">1</span><span class="district">tick</span>
+  </div>
+  <label class="chk"><input type="checkbox" id="timed"> Timed ticks · 12s</label>
+  <div class="spacer"></div>
+  <div class="seg" role="group" aria-label="View">
+    <button data-v="street" aria-pressed="true">Street</button>
+    <button data-v="net" aria-pressed="false">Net <span aria-hidden="true">(Q)</span></button>
+  </div>
+  <button class="btn" id="briefBtn">Brief</button>
+</header>
+
+<main class="layout">
+  <aside class="left" aria-label="Crew status">
+    <section class="card wren" id="wrenCard"></section>
+    <section class="card kade" id="kadeCard"></section>
+  </aside>
+
+  <section class="center">
+    <div class="stage">
+      <canvas id="view" width="704" height="484" aria-label="District map"></canvas>
+      <div class="hint" id="hint">Street · meatspace</div>
+      <canvas id="pip" width="280" height="200" aria-label="Kade's body, street view"></canvas>
+    </div>
+    <div class="planbar">
+      <div class="slot w"><small>Wren · this tick</small><b id="planW">Wait</b></div>
+      <div class="slot k"><small>Kade · this tick</small><b id="planK">Hold</b></div>
+      <button class="run disp" id="runBtn">RUN TICK</button>
+    </div>
+    <div class="actions" id="actions"></div>
+    <div class="dpad" id="dpad" aria-label="Move Wren">
+      <button class="n" data-d="0" aria-label="Move north">▲</button>
+      <button class="w" data-d="3" aria-label="Move west">◀</button>
+      <button class="s" data-d="2" aria-label="Move south">▼</button>
+      <button class="e" data-d="1" aria-label="Move east">▶</button>
+    </div>
+  </section>
+
+  <aside class="right">
+    <section class="card"><h3>Wire log</h3><ul id="log" aria-live="polite"></ul></section>
+    <section class="card"><h3>Legend</h3>
+      <div class="legend">
+        <i style="background:var(--amber);transform:rotate(45deg) scale(.7)"></i><span>Wren · payload · your crew</span>
+        <i style="background:var(--crim);clip-path:polygon(0 0,100% 50%,0 100%)"></i><span>Syndicate hunter</span>
+        <i style="background:rgba(224,70,78,.35)"></i><span>Hunter vision</span>
+        <i style="background:rgba(240,235,220,.35)"></i><span>Camera cone</span>
+        <i style="background:var(--net)"></i><span>Net · Kade</span>
+        <i style="background:var(--own)"></i><span>System you own</span>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div class="ov show" id="start" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+  <div class="box">
+    <div class="eyebrow">Contract 0417 · Ironbridge Sprawl</div>
+    <h1 class="huge disp" id="startTitle">WET<b>WIRE</b></h1>
+    <p>Information is too valuable for the Net, so it rides inside people. Wren carries a payload in her skull and every tick it burns her out a little more. Get her from the safehouse to the receiver before it cooks her or the Syndicate takes it.</p>
+    <p class="dim">You run two people at once: Wren on the Street and Kade, a decker, in the Net. Plan both moves, then run the tick. Everything resolves at the same moment, and hunters telegraph the step they will take.</p>
+    <fieldset class="loads" aria-label="Payload size" id="loads"></fieldset>
+    <div class="howto">
+      <div><h4>Street</h4>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows move Wren · <kbd>X</kbd> wait · <kbd>M</kbd> mask (+10 overload, cameras ignore you, hunters see you only if adjacent).<br>
+        Red dashed arrows are promises: hunters take exactly that step.</div>
+      <div><h4>Net</h4>
+        <kbd>Q</kbd> switch layer · <kbd>1</kbd>–<kbd>9</kbd> or click a node or hunter to plan Kade's action. Hacks add neural load and trace; at 100 load he dumpshocks.<br>
+        <kbd>Space</kbd> / <kbd>Enter</kbd> runs the tick.</div>
+    </div>
+    <button class="go disp" id="startBtn">START RUN</button>
+  </div>
+</div>
+
+<div class="ov" id="end" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+  <div class="box">
+    <div class="eyebrow" id="endEyebrow">Contract closed</div>
+    <h1 class="huge disp" id="endTitle">Delivered</h1>
+    <p id="endText"></p>
+    <div class="stats" id="endStats"></div>
+    <button class="go disp" id="againBtn">RUN IT AGAIN</button>
+  </div>
+</div>
+
+<!-- ===================================================================
+     SIM: pure rules. No DOM, no timers, no randomness, no I/O.
+     =================================================================== -->
+<script id="sim">
+const Sim = (() => {
+  'use strict';
+
+  // Every tunable number lives here (docs/BALANCE.md tracks changes).
+  const CONFIG = {
+    tile: 44, cols: 16, rows: 11,
+    payloads: {
+      light:    { label: 'Light',    mb: 160, rate: 2, fee: 12000, note: 'Plenty of time for the long way' },
+      standard: { label: 'Standard', mb: 320, rate: 3, fee: 28000, note: 'Long route works if nothing goes wrong' },
+      heavy:    { label: 'Heavy',    mb: 640, rate: 4, fee: 60000, note: 'Needs both doors; no margin' },
+    },
+    defaultPayload: 'standard',
+    overloadMax: 100,
+    maskCost: 10,
+    wrenBody: 3, kadeBody: 2,
+    cam: { range: 6, cos: 0.8, blindTicks: 4, turnEvery: 2 },
+    hunter: { sight: 4.5, memory: 6, stunTicks: 2, hitDamage: 1 },
+    net: {
+      decay: { load: 6, trace: 2 },
+      costs: {
+        blind:  { load: 15, trace: 12 },
+        unlock: { load: 20, trace: 15 },
+        ice:    { load: 15, trace: 10 },
+        burn:   { load: 30, trace: 25 },
+      },
+      burnRange: 4, blindTicks: 4, burnStun: 2, iceLayers: 2,
+      loadMax: 100, traceMax: 100,
+      overloadShock: 3, loadAfterShock: 60,
+      bodyHitShock: 4, bodyHitLoadFloor: 70,
+    },
+    downloadTicks: 2,
+    fee: { base: 0.55, perBody: 0.15, round: 100 },
+  };
+
+  const MAP_ROWS = [
+    '################',
+    '#..............#',
+    '#.####...#####.#',
+    '#.###.....#....#',
+    '#.###..#..#..R.#',
+    '#.###.....D....#',
+    '#...#..#..#....#',
+    '#...#.....######',
+    '#...D.....######',
+    '#S.T#.....######',
+    '################',
+  ];
+  const COLS = CONFIG.cols, ROWS = CONFIG.rows;
+  const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // N E S W (also the BFS tie-break order)
+  const DIR_NAMES = ['north', 'east', 'south', 'west'];
+  const WREN_START = { x: 1, y: 9 };
+  const TERMINAL = { x: 3, y: 9 };
+  const RECEIVER = { x: 13, y: 4 };
+  const DOOR_DEFS = { DR1: { x: 10, y: 5, name: 'DOOR-1' }, DR2: { x: 4, y: 8, name: 'DOOR-2' } };
+  const NODE_DEFS = {
+    TERM: { x: 3, y: 9, type: 'terminal', label: 'TERM' },
+    DR2:  { x: 4, y: 8, type: 'door', label: 'DOOR-2', ctl: 'DR2' },
+    JX1:  { x: 4, y: 6, type: 'junction', label: 'JX-1' },
+    CAMA: { x: 1, y: 1, type: 'camera', label: 'CAM-A', ctl: 'CAM-A' },
+    CAMC: { x: 9, y: 9, type: 'camera', label: 'CAM-C', ctl: 'CAM-C' },
+    JX2:  { x: 9, y: 2, type: 'junction', label: 'JX-2' },
+    CAMB: { x: 14, y: 1, type: 'camera', label: 'CAM-B', ctl: 'CAM-B' },
+    ICE:  { x: 10, y: 3, type: 'ice', label: 'ICE' },
+    DR1:  { x: 10, y: 5, type: 'door', label: 'DOOR-1', ctl: 'DR1' },
+  };
+  const LINKS = [['TERM', 'DR2'], ['TERM', 'JX1'], ['JX1', 'CAMA'], ['JX1', 'CAMC'],
+                 ['JX1', 'JX2'], ['JX2', 'CAMB'], ['JX2', 'ICE'], ['ICE', 'DR1']];
+  const NEIGHBOURS = (() => {
+    const m = {};
+    for (const id in NODE_DEFS) m[id] = [];
+    for (const [a, b] of LINKS) { m[a].push(b); m[b].push(a); }
+    return m;
+  })();
+  const CAM_DEFS = [
+    { id: 'CAM-A', node: 'CAMA', x: 1, y: 1, dirs: [1, 2] },  // east, south
+    { id: 'CAM-B', node: 'CAMB', x: 14, y: 1, dirs: [3, 2] }, // west, south
+    { id: 'CAM-C', node: 'CAMC', x: 9, y: 9, dirs: [0, 3] },  // north, west
+  ];
+  const HUNTER_DEFS = [
+    { id: 'H-1', x: 8, y: 1, face: 1, wps: [[13, 1], [2, 1]], wpi: 0 },
+    { id: 'H-2', x: 9, y: 6, face: 0, wps: [[5, 3], [9, 3], [9, 8], [5, 8]], wpi: 1 },
+  ];
+
+  // ---------- geometry helpers (pure) ----------
+  const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+  const tileChar = (x, y) => (inBounds(x, y) ? MAP_ROWS[y][x] : '#');
+  const doorIdAt = (x, y) => {
+    for (const id in DOOR_DEFS) if (DOOR_DEFS[id].x === x && DOOR_DEFS[id].y === y) return id;
+    return null;
+  };
+  const passable = (s, x, y) => {
+    if (tileChar(x, y) === '#') return false;
+    const d = doorIdAt(x, y);
+    return !d || s.doors[d];
+  };
+  const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const euclid = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  function distField(s, goals, openDoors) {
+    const dist = new Int16Array(COLS * ROWS).fill(-1);
+    const queue = [];
+    for (const g of goals) if (inBounds(g.x, g.y)) { dist[g.y * COLS + g.x] = 0; queue.push(g.x, g.y); }
+    for (let i = 0; i < queue.length; i += 2) {
+      const x = queue[i], y = queue[i + 1], d = dist[y * COLS + x];
+      for (const [dx, dy] of DIRS) {
+        const nx = x + dx, ny = y + dy;
+        if (!inBounds(nx, ny) || dist[ny * COLS + nx] !== -1) continue;
+        const ok = openDoors ? tileChar(nx, ny) !== '#' : passable(s, nx, ny);
+        if (!ok) continue;
+        dist[ny * COLS + nx] = d + 1;
+        queue.push(nx, ny);
+      }
+    }
+    return dist;
+  }
+
+  function stepToward(s, from, goals) {
+    const dist = distField(s, goals, false);
+    const here = dist[from.y * COLS + from.x];
+    if (here <= 0) return null;
+    for (const [dx, dy] of DIRS) {
+      const nx = from.x + dx, ny = from.y + dy;
+      if (inBounds(nx, ny) && dist[ny * COLS + nx] === here - 1) return { x: nx, y: ny };
+    }
+    return null;
+  }
+
+  // Bresenham over tile centres. Walls and closed doors block; endpoints never do.
+  function lineOfSight(s, a, b) {
+    let x = a.x, y = a.y;
+    const dx = Math.abs(b.x - a.x), dy = -Math.abs(b.y - a.y);
+    const sx = a.x < b.x ? 1 : -1, sy = a.y < b.y ? 1 : -1;
+    let err = dx + dy;
+    while (x !== b.x || y !== b.y) {
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x += sx; }
+      if (e2 <= dx) { err += dx; y += sy; }
+      if ((x !== b.x || y !== b.y) && !passable(s, x, y)) return false;
+    }
+    return true;
+  }
+
+  const camFacing = (cam, tick) => cam.dirs[Math.floor((tick - 1) / CONFIG.cam.turnEvery) % 2];
+
+  function inCone(s, cam, tick, p) {
+    const [fx, fy] = DIRS[camFacing(cam, tick)];
+    const dx = p.x - cam.x, dy = p.y - cam.y, d = Math.hypot(dx, dy);
+    if (d === 0) return true;
+    if (d > CONFIG.cam.range || (dx * fx + dy * fy) / d < CONFIG.cam.cos) return false;
+    return lineOfSight(s, cam, p);
+  }
+
+  function camSees(s, cam) {
+    return cam.blind === 0 && !s.wren.masked && inCone(s, cam, s.tick, s.wren);
+  }
+
+  function hunterSees(s, h) {
+    const w = s.wren;
+    if (manhattan(h, w) <= 1) return true;
+    return !w.masked && euclid(h, w) <= CONFIG.hunter.sight && lineOfSight(s, h, w);
+  }
+
+  const bodyApproachTiles = (s) =>
+    DIRS.map(([dx, dy]) => ({ x: TERMINAL.x + dx, y: TERMINAL.y + dy })).filter((t) => passable(s, t.x, t.y));
+
+  // ---------- match creation ----------
+  function createMatch(payloadKey) {
+    const payload = CONFIG.payloads[payloadKey] ? payloadKey : CONFIG.defaultPayload;
+    const s = {
+      tick: 1, payload, status: 'play', outcome: null,
+      wren: { x: WREN_START.x, y: WREN_START.y, body: CONFIG.wrenBody, overload: 0, masked: false },
+      kade: { node: 'TERM', load: 0, trace: 0, body: CONFIG.kadeBody, shock: 0, shockNew: false, flat: false },
+      doors: { DR1: false, DR2: false },
+      ice: CONFIG.net.iceLayers,
+      owned: [],
+      cams: CAM_DEFS.map((c) => ({ ...c, dirs: [...c.dirs], blind: 0 })),
+      hunters: HUNTER_DEFS.map((h) => ({
+        id: h.id, x: h.x, y: h.y, fx: DIRS[h.face][0], fy: DIRS[h.face][1],
+        mode: 'patrol', wps: h.wps.map((w) => [...w]), wpi: h.wpi,
+        target: null, memory: 0, stun: 0, plan: null,
+      })),
+      download: 0,
+      stats: { alerts: 0, hacks: 0 },
+    };
+    planHunters(s);
+    return s;
+  }
+
+  // ---------- hunter planning (the telegraph) ----------
+  function planPatrol(s, h) {
+    for (let tries = 0; tries < h.wps.length; tries++) {
+      const [gx, gy] = h.wps[h.wpi];
+      if (h.x === gx && h.y === gy) { h.wpi = (h.wpi + 1) % h.wps.length; continue; }
+      const step = stepToward(s, h, [{ x: gx, y: gy }]);
+      if (step) return step;
+      h.wpi = (h.wpi + 1) % h.wps.length; // no path: skip the waypoint
+    }
+    return null;
+  }
+
+  function planHunters(s) {
+    for (const h of s.hunters) {
+      if (h.mode === 'patrol') h.plan = planPatrol(s, h);
+      else if (h.mode === 'hunt') h.plan = h.target ? stepToward(s, h, [h.target]) : null;
+      else h.plan = manhattan(h, TERMINAL) <= 1 ? null : stepToward(s, h, bodyApproachTiles(s));
+    }
+  }
+
+  // ---------- legal actions ----------
+  function legalWren(s) {
+    const acts = [];
+    for (let d = 0; d < 4; d++) {
+      const nx = s.wren.x + DIRS[d][0], ny = s.wren.y + DIRS[d][1];
+      if (tileChar(nx, ny) !== '#') acts.push({ type: 'move', dir: d });
+    }
+    acts.push({ type: 'wait' }, { type: 'mask' });
+    return acts;
+  }
+
+  function legalKade(s) {
+    const k = s.kade;
+    if (k.flat) return [];
+    const hold = { type: 'hold' };
+    if (k.shock > 0) return [hold];
+    const hacks = [], routes = [];
+    for (const id of [k.node, ...NEIGHBOURS[k.node]]) {
+      const def = NODE_DEFS[id];
+      if (def.type === 'camera' && s.cams.find((c) => c.node === id).blind === 0) hacks.push({ type: 'blind', target: id });
+      if (def.type === 'door' && !s.doors[def.ctl]) hacks.push({ type: 'unlock', target: id });
+      if (def.type === 'ice' && s.ice > 0) hacks.push({ type: 'ice', target: id });
+    }
+    const at = NODE_DEFS[k.node];
+    for (const h of s.hunters) {
+      if (h.stun === 0 && manhattan(at, h) <= CONFIG.net.burnRange) hacks.push({ type: 'burn', target: h.id });
+    }
+    for (const id of NEIGHBOURS[k.node]) {
+      if (!(NODE_DEFS[id].type === 'ice' && s.ice > 0)) routes.push({ type: 'route', target: id });
+    }
+    return [...hacks, ...routes, hold];
+  }
+
+  const costOf = (a) => CONFIG.net.costs[a.type] || null;
+  const sameAction = (a, b) => a && b && a.type === b.type && a.target === b.target && a.dir === b.dir;
+
+  // ---------- tick steps (§3.6, in order) ----------
+  const addEvent = (ctx, layer, kind, text, fx) => ctx.ev.push({ tick: ctx.s.tick, layer, kind, text, fx: fx || null });
+  const own = (s, id) => { if (!s.owned.includes(id)) s.owned.push(id); };
+
+  function applyHack(ctx, a) {
+    const { s } = ctx, k = s.kade, c = CONFIG.net.costs[a.type];
+    k.load += c.load; k.trace += c.trace; ctx.hacked = true; s.stats.hacks++;
+    const pos = NODE_DEFS[a.target] || s.hunters.find((h) => h.id === a.target);
+    const fx = { kind: 'hack', x: pos.x, y: pos.y };
+    if (a.type === 'blind') {
+      s.cams.find((cam) => cam.node === a.target).blind = CONFIG.net.blindTicks;
+      own(s, a.target);
+      addEvent(ctx, 'NET', 'good', `Kade blinds ${NODE_DEFS[a.target].label} for ${CONFIG.net.blindTicks} ticks`, fx);
+    } else if (a.type === 'unlock') {
+      s.doors[NODE_DEFS[a.target].ctl] = true;
+      own(s, a.target);
+      addEvent(ctx, 'NET', 'good', `Kade unlocks ${NODE_DEFS[a.target].label}`, fx);
+    } else if (a.type === 'ice') {
+      s.ice -= 1; own(s, 'ICE');
+      addEvent(ctx, 'NET', 'good', s.ice ? 'Kade strips an ICE layer' : 'Kade breaks the ICE', fx);
+    } else {
+      const h = s.hunters.find((x) => x.id === a.target);
+      h.stun = CONFIG.net.burnStun;
+      addEvent(ctx, 'NET', 'good', `Kade burns ${h.id}'s implants`, fx);
+    }
+  }
+
+  function stepNet(ctx, act) {
+    const { s } = ctx, k = s.kade;
+    const legal = legalKade(s);
+    if (!legal.length) return;
+    const a = legal.find((l) => sameAction(l, act)) || legal.find((l) => l.type === 'hold');
+    if (k.shock > 0) addEvent(ctx, 'NET', 'bad', `Kade is in dumpshock (${k.shock})`);
+    if (a.type === 'route') {
+      k.node = a.target;
+      addEvent(ctx, 'NET', 'info', `Kade routes to ${NODE_DEFS[a.target].label}`);
+    } else if (costOf(a)) applyHack(ctx, a);
+  }
+
+  function stepWren(ctx, act) {
+    const { s } = ctx, w = s.wren;
+    const a = legalWren(s).find((l) => sameAction(l, act)) || { type: 'wait' };
+    w.masked = false;
+    if (a.type === 'mask') {
+      w.masked = true; w.overload += CONFIG.maskCost;
+      addEvent(ctx, 'STREET', 'info', 'Wren masks her signal');
+    } else if (a.type === 'move') {
+      const nx = w.x + DIRS[a.dir][0], ny = w.y + DIRS[a.dir][1];
+      if (passable(s, nx, ny)) { w.x = nx; w.y = ny; }
+      else addEvent(ctx, 'STREET', 'info', 'Wren bumps a locked door', { kind: 'bump', x: nx, y: ny });
+    }
+  }
+
+  function stepHunters(ctx) {
+    for (const h of ctx.s.hunters) {
+      if (h.stun > 0 || !h.plan || !passable(ctx.s, h.plan.x, h.plan.y)) continue;
+      h.fx = h.plan.x - h.x; h.fy = h.plan.y - h.y;
+      h.x = h.plan.x; h.y = h.plan.y;
+      if (h.mode === 'patrol') {
+        const [gx, gy] = h.wps[h.wpi];
+        if (h.x === gx && h.y === gy) h.wpi = (h.wpi + 1) % h.wps.length;
+      }
+    }
+  }
+
+  function stepCameras(ctx) {
+    const { s } = ctx;
+    for (const cam of s.cams) {
+      if (!camSees(s, cam)) continue;
+      s.stats.alerts++;
+      addEvent(ctx, 'STREET', 'bad', `${cam.id} spots Wren, hunters alerted`, { kind: 'spot', x: s.wren.x, y: s.wren.y, cam: cam.id });
+      for (const h of s.hunters) {
+        if (h.mode === 'body') continue;
+        h.mode = 'hunt'; h.target = { x: s.wren.x, y: s.wren.y }; h.memory = CONFIG.hunter.memory;
+      }
+    }
+  }
+
+  function stepSight(ctx) {
+    const { s } = ctx;
+    for (const h of s.hunters) {
+      if (h.stun > 0 || h.mode === 'body') continue;
+      if (hunterSees(s, h)) {
+        if (h.mode !== 'hunt') addEvent(ctx, 'STREET', 'bad', `${h.id} spots Wren`);
+        h.mode = 'hunt'; h.target = { x: s.wren.x, y: s.wren.y }; h.memory = CONFIG.hunter.memory;
+      } else if (h.mode === 'hunt') {
+        h.memory -= 1;
+        if (h.memory <= 0 || (h.target && h.x === h.target.x && h.y === h.target.y)) {
+          h.mode = 'patrol'; h.target = null;
+          addEvent(ctx, 'STREET', 'good', `${h.id} loses the trail`);
+        }
+      }
+    }
+  }
+
+  function hitKade(ctx, h) {
+    const k = ctx.s.kade, n = CONFIG.net;
+    k.body -= 1; k.shock = n.bodyHitShock; k.shockNew = true; k.trace = 0;
+    k.load = Math.max(k.load, n.bodyHitLoadFloor);
+    h.mode = 'patrol'; h.target = null; h.stun = CONFIG.hunter.stunTicks;
+    if (k.body <= 0) { k.flat = true; k.shock = 0; }
+    addEvent(ctx, 'STREET', 'bad', k.flat ? `${h.id} flatlines Kade` : `${h.id} reaches Kade's body, dumpshock ${n.bodyHitShock}`,
+      { kind: 'hit', x: TERMINAL.x, y: TERMINAL.y });
+  }
+
+  function stepAttacks(ctx) {
+    const { s } = ctx;
+    for (const h of s.hunters) {
+      if (h.stun > 0) continue;
+      if (manhattan(h, s.wren) <= 1) {
+        s.wren.body -= CONFIG.hunter.hitDamage; h.stun = CONFIG.hunter.stunTicks;
+        addEvent(ctx, 'STREET', 'bad', `${h.id} hits Wren (body ${Math.max(0, s.wren.body)})`, { kind: 'hit', x: s.wren.x, y: s.wren.y });
+      } else if (h.mode === 'body' && !s.kade.flat && manhattan(h, TERMINAL) <= 1) hitKade(ctx, h);
+    }
+  }
+
+  function sendBodyHunter(ctx) {
+    const { s } = ctx;
+    if (s.hunters.some((h) => h.mode === 'body')) return;
+    const field = distField(s, bodyApproachTiles(s), false);
+    let best = null, bestD = Infinity;
+    for (const h of s.hunters) {
+      const d = field[h.y * COLS + h.x];
+      if (d >= 0 && d < bestD) { best = h; bestD = d; }
+    }
+    if (!best) return;
+    best.mode = 'body'; best.target = null;
+    addEvent(ctx, 'NET', 'bad', `Trace maxed, ${best.id} heads for Kade's body`);
+  }
+
+  function stepMeters(ctx) {
+    const { s } = ctx, k = s.kade, n = CONFIG.net;
+    s.wren.overload += CONFIG.payloads[s.payload].rate;
+    if (!ctx.hacked) { k.load = Math.max(0, k.load - n.decay.load); k.trace = Math.max(0, k.trace - n.decay.trace); }
+    if (k.shock > 0 && !k.shockNew) k.shock -= 1;
+    if (k.load >= n.loadMax && !k.flat) {
+      k.shock = n.overloadShock; k.load = n.loadAfterShock;
+      addEvent(ctx, 'NET', 'bad', `Kade overloads, dumpshock ${n.overloadShock}`);
+    }
+    if (k.trace >= n.traceMax) { k.trace = n.traceMax; if (!k.flat) sendBodyHunter(ctx); }
+    if (k.flat) for (const h of s.hunters) if (h.mode === 'body') h.mode = 'patrol';
+    for (const c of s.cams) c.blind = Math.max(0, c.blind - 1);
+    for (const h of s.hunters) h.stun = Math.max(0, h.stun - 1);
+    k.shockNew = false;
+  }
+
+  function stepEnd(ctx) {
+    const { s } = ctx, w = s.wren;
+    if (w.x === RECEIVER.x && w.y === RECEIVER.y) {
+      s.download += 1;
+      addEvent(ctx, 'STREET', 'good', `Receiver reads out ${Math.min(s.download, CONFIG.downloadTicks)}/${CONFIG.downloadTicks}`);
+    } else s.download = 0;
+    if (s.download >= CONFIG.downloadTicks) s.outcome = 'delivered';
+    else if (w.body <= 0) s.outcome = 'taken';
+    else if (w.overload >= CONFIG.overloadMax) s.outcome = 'flatlined';
+    if (s.outcome) s.status = 'over';
+  }
+
+  function stepNext(ctx) {
+    if (ctx.s.status !== 'play') return;
+    ctx.s.tick += 1;
+    planHunters(ctx.s);
+  }
+
+  function resolveTick(prev, wrenAct, kadeAct) {
+    if (prev.status !== 'play') return { state: prev, events: [] };
+    const ctx = { s: structuredClone(prev), ev: [], hacked: false };
+    stepNet(ctx, kadeAct);
+    stepWren(ctx, wrenAct);
+    stepHunters(ctx);
+    stepCameras(ctx);
+    stepSight(ctx);
+    stepAttacks(ctx);
+    stepMeters(ctx);
+    stepEnd(ctx);
+    stepNext(ctx);
+    return { state: ctx.s, events: ctx.ev };
+  }
+
+  function fee(s) {
+    const f = CONFIG.fee;
+    const raw = CONFIG.payloads[s.payload].fee * (f.base + f.perBody * Math.max(0, s.wren.body));
+    return Math.round(raw / f.round) * f.round;
+  }
+
+  return {
+    CONFIG, MAP_ROWS, DIRS, DIR_NAMES, NODE_DEFS, LINKS, NEIGHBOURS, DOOR_DEFS, TERMINAL, RECEIVER, WREN_START,
+    createMatch, resolveTick, legalWren, legalKade, costOf, sameAction, fee,
+    distField, stepToward, lineOfSight, camFacing, inCone, passable, tileChar, manhattan, euclid, hunterSees, bodyApproachTiles,
+  };
+})();
+</script>
+
+<!-- ===================================================================
+     CLIENT: reads state, submits actions. Never decides outcomes.
+     =================================================================== -->
+<script id="client">
+(() => {
+  'use strict';
+  const { CONFIG, DIRS, NODE_DEFS, LINKS, DOOR_DEFS, TERMINAL, RECEIVER } = Sim;
+  const T = CONFIG.tile, COLS = CONFIG.cols, ROWS = CONFIG.rows, VW = COLS * T, VH = ROWS * T;
+  const TAU = Math.PI * 2;
+  const C = { ink: '#0c0d0f', fg: '#dcd8cf', mute: '#8b877e', amber: '#f0b43c', crim: '#e0464e', net: '#5ee0ff', own: '#b98cff' };
+  const ANIM_MS = 300, TIMER_MS = 12000;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- preferences (localStorage may throw) ----------
+  const prefs = { timed: false, payload: CONFIG.defaultPayload };
+  try { Object.assign(prefs, JSON.parse(localStorage.getItem('wetwire.prefs') || '{}')); }
+  catch (err) { console.warn('wetwire: could not read prefs', err); }
+  const savePrefs = () => {
+    try { localStorage.setItem('wetwire.prefs', JSON.stringify(prefs)); }
+    catch (err) { console.warn('wetwire: could not save prefs', err); }
+  };
+
+  // ---------- app state ----------
+  let state = null, plan = { wren: { type: 'wait' }, kade: { type: 'hold' } };
+  let view = 'street', wipe = 0, wipeTarget = 0;
+  let anim = { t0: -1e9, prev: null };
+  let fx = [], logLines = [], tickStart = 0, endTimer = 0, legalK = [];
+  let vis = { hunter: [], cam: [], camNext: [] };
+  let camFlash = {};
+  let lastRing = -1, jitterUntil = 0;
+
+  // ---------- canvases ----------
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const view$ = $('view'), vctx = view$.getContext('2d');
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w * dpr; c.height = h * dpr; return c; };
+  const streetCv = mk(VW, VH), netCv = mk(VW, VH), bgStreet = mk(VW, VH), bgNet = mk(VW, VH);
+  const sctx = streetCv.getContext('2d'), nctx = netCv.getContext('2d');
+  view$.width = VW * dpr; view$.height = VH * dpr;
+  const pip$ = $('pip'), pctx = pip$.getContext('2d');
+
+  // small deterministic PRNG for static art only (never used for rules)
+  function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  const isWall = (x, y) => Sim.tileChar(x, y) === '#';
+
+  function buildStreetBg() {
+    const c = bgStreet.getContext('2d'), r = rng(17);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = '#16171b'; c.fillRect(0, 0, VW, VH);
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (isWall(x, y)) continue;
+      c.fillStyle = (x + y) % 2 ? 'rgba(255,255,255,.012)' : 'rgba(0,0,0,.05)';
+      c.fillRect(x * T, y * T, T, T);
+      c.fillStyle = 'rgba(255,255,255,.05)';
+      for (let i = 0; i < 9; i++) c.fillRect(x * T + r() * T, y * T + r() * T, 1, 1);
+      c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 1;
+      c.strokeRect(x * T + .5, y * T + .5, T, T);
+    }
+    for (const [px, py] of [[2.2, 1.5], [7.5, 5.6], [11.8, 3.2], [5.5, 8.4], [13, 1.6]]) {
+      c.save(); c.translate(px * T, py * T); c.rotate(-.2);
+      c.fillStyle = 'rgba(5,6,8,.7)'; c.beginPath(); c.ellipse(0, 0, 17, 7, 0, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(220,216,207,.22)'; c.beginPath(); c.moveTo(-9, -1); c.lineTo(5, -3); c.stroke();
+      c.restore();
+    }
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (!isWall(x, y)) continue;
+      c.fillStyle = '#08090b'; c.fillRect(x * T, y * T, T, T);
+      c.save(); c.beginPath(); c.rect(x * T, y * T, T, T); c.clip();
+      c.strokeStyle = '#17181c'; c.lineWidth = 2;
+      for (let i = -T; i < T * 2; i += 9) { c.beginPath(); c.moveTo(x * T + i, y * T + T); c.lineTo(x * T + i + T, y * T); c.stroke(); }
+      c.restore();
+      if (!isWall(x, y + 1) && y + 1 < ROWS) { c.fillStyle = '#3a3b42'; c.fillRect(x * T, y * T + T - 2, T, 2); }
+    }
+    for (const [lx, ly] of [[2, 1.5], [8, 3], [12.5, 2], [6, 8], [1.5, 8.5]]) {
+      const g = c.createRadialGradient(lx * T, ly * T, 0, lx * T, ly * T, 90);
+      g.addColorStop(0, 'rgba(240,215,160,.1)'); g.addColorStop(1, 'rgba(240,215,160,0)');
+      c.fillStyle = g; c.fillRect(0, 0, VW, VH);
+    }
+    const v = c.createRadialGradient(VW / 2, VH / 2, VH * .4, VW / 2, VH / 2, VW * .65);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.6)');
+    c.fillStyle = v; c.fillRect(0, 0, VW, VH);
+  }
+
+  function buildNetBg() {
+    const c = bgNet.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = '#050b18'; c.fillRect(0, 0, VW, VH);
+    c.fillStyle = 'rgba(94,224,255,.2)';
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (!isWall(x, y)) c.fillRect(x * T + T / 2 - 1, y * T + T / 2 - 1, 2, 2);
+    c.strokeStyle = 'rgba(94,224,255,.32)'; c.lineWidth = 1; c.beginPath();
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (!isWall(x, y)) continue;
+      const X = x * T, Y = y * T;
+      if (!isWall(x, y - 1) && y > 0) { c.moveTo(X, Y); c.lineTo(X + T, Y); }
+      if (!isWall(x, y + 1) && y < ROWS - 1) { c.moveTo(X, Y + T); c.lineTo(X + T, Y + T); }
+      if (!isWall(x - 1, y) && x > 0) { c.moveTo(X, Y); c.lineTo(X, Y + T); }
+      if (!isWall(x + 1, y) && x < COLS - 1) { c.moveTo(X + T, Y); c.lineTo(X + T, Y + T); }
+    }
+    c.stroke();
+  }
+
+  // ---------- caches rebuilt per state change (not per frame) ----------
+  function buildVis() {
+    vis = { hunter: [], cam: [], camNext: [] };
+    for (const h of state.hunters) {
+      const list = [];
+      if (h.stun === 0) for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+        if (!Sim.passable(state, x, y) && !isWall(x, y)) { /* closed door tile is lit up to its edge */ }
+        if (isWall(x, y) || Sim.euclid(h, { x, y }) > CONFIG.hunter.sight) continue;
+        if (Sim.lineOfSight(state, h, { x, y })) list.push(x, y);
+      }
+      vis.hunter.push(list);
+    }
+    for (const cam of state.cams) {
+      const list = [];
+      if (cam.blind === 0) for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+        if (!isWall(x, y) && Sim.inCone(state, cam, state.tick, { x, y })) list.push(x, y);
+      }
+      vis.cam.push(list);
+    }
+    legalK = Sim.legalKade(state);
+  }
+
+  // ---------- drawing helpers ----------
+  const cx = (x) => (x + .5) * T;
+  function diamond(c, x, y, r) { c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + r, y); c.lineTo(x, y + r); c.lineTo(x - r, y); c.closePath(); }
+  function poly(c, x, y, r, n, rot) { c.beginPath(); for (let i = 0; i < n; i++) { const a = rot + (i / n) * TAU; c[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); } c.closePath(); }
+  function arrow(c, x1, y1, x2, y2, col, dashed) {
+    c.save(); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2;
+    if (dashed) c.setLineDash([5, 4]);
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.setLineDash([]);
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    c.beginPath(); c.moveTo(x2, y2); c.lineTo(x2 - Math.cos(a - .45) * 9, y2 - Math.sin(a - .45) * 9);
+    c.lineTo(x2 - Math.cos(a + .45) * 9, y2 - Math.sin(a + .45) * 9); c.closePath(); c.fill(); c.restore();
+  }
+  function brackets(c, x, y, r, col) {
+    c.save(); c.strokeStyle = col; c.lineWidth = 2; const k = r * .45;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      c.beginPath(); c.moveTo(x + sx * r, y + sy * (r - k)); c.lineTo(x + sx * r, y + sy * r); c.lineTo(x + sx * (r - k), y + sy * r); c.stroke();
+    }
+    c.restore();
+  }
+  function label(c, text, x, y, col, size) {
+    c.font = `500 ${size || 9}px "Martian Mono", monospace`; c.textAlign = 'center'; c.fillStyle = col; c.fillText(text, x, y);
+  }
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  function unitPos(now, cur, prevU) {
+    if (!prevU) return cur;
+    const k = reduceMotion.matches ? 1 : ease(Math.max(0, Math.min(1, (now - anim.t0) / ANIM_MS))); // rAF timestamps can precede commit time
+    return { x: prevU.x + (cur.x - prevU.x) * k, y: prevU.y + (cur.y - prevU.y) * k };
+  }
+  const prevOf = (id) => (anim.prev ? anim.prev[id] : null);
+
+  // ---------- rain ----------
+  const drops = []; { const r = rng(9); for (let i = 0; i < 140; i++) drops.push({ x: r() * VW, y: r() * VH, l: 8 + r() * 12, v: 5 + r() * 5 }); }
+  function drawRain(c) {
+    if (reduceMotion.matches) return;
+    c.strokeStyle = 'rgba(200,210,220,.16)'; c.lineWidth = 1; c.beginPath();
+    for (let i = 0; i < drops.length; i++) {
+      const d = drops[i]; d.y += d.v; d.x -= d.v * .22;
+      if (d.y > VH || d.x < 0) { d.y = -d.l; d.x = (d.x + VW) % VW; }
+      c.moveTo(d.x, d.y); c.lineTo(d.x - d.l * .22, d.y + d.l);
+    }
+    c.stroke();
+  }
+
+  // ---------- street layer ----------
+  function drawDoor(c, id, now) {
+    const d = DOOR_DEFS[id], x = d.x * T, y = d.y * T, open = state.doors[id];
+    if (!open) {
+      c.fillStyle = '#2a2b31'; c.fillRect(x + 3, y + 3, T - 6, T - 6);
+      c.strokeStyle = C.fg; c.lineWidth = 1.5; c.strokeRect(x + 3, y + 3, T - 6, T - 6);
+      c.fillStyle = C.fg; c.fillRect(x + T / 2 - 6, y + T / 2 - 1, 12, 9);
+      c.lineWidth = 2; c.beginPath(); c.arc(x + T / 2, y + T / 2 - 1, 5, Math.PI, 0); c.stroke();
+    } else {
+      c.fillStyle = '#3a3b42'; c.fillRect(x + 1, y + 2, 5, T - 4); c.fillRect(x + T - 6, y + 2, 5, T - 4);
+      c.save(); c.strokeStyle = C.own; c.lineWidth = 1.5; c.setLineDash([4, 4]);
+      c.lineDashOffset = reduceMotion.matches ? 0 : -now / 60; c.strokeRect(x + 3, y + 3, T - 6, T - 6); c.restore();
+    }
+  }
+
+  function drawCam(c, cam, now) {
+    const [fx_, fy_] = DIRS[Sim.camFacing(cam, state.tick)], x = cx(cam.x), y = cx(cam.y);
+    c.save(); c.translate(x, y); c.rotate(Math.atan2(fy_, fx_));
+    c.fillStyle = cam.blind ? '#2a2b31' : '#d8d4cb'; c.fillRect(-8, -5, 16, 10);
+    c.fillStyle = cam.blind ? '#444' : C.ink; c.fillRect(4, -3, 5, 6);
+    c.restore();
+    if (cam.blind) {
+      c.strokeStyle = C.own; c.lineWidth = 2; c.beginPath();
+      c.moveTo(x - 7, y - 7); c.lineTo(x + 7, y + 7); c.moveTo(x + 7, y - 7); c.lineTo(x - 7, y + 7); c.stroke();
+      label(c, `BLIND ${cam.blind}`, x, y - 13, C.own, 8);
+    }
+  }
+
+  function drawCamNext(c, cam) {
+    const nf = Sim.camFacing(cam, state.tick + 1);
+    if (cam.blind > 1 || nf === Sim.camFacing(cam, state.tick)) return;
+    const ang = Math.atan2(DIRS[nf][1], DIRS[nf][0]), half = Math.acos(CONFIG.cam.cos), r = CONFIG.cam.range * T;
+    c.save(); c.strokeStyle = 'rgba(240,235,220,.4)'; c.setLineDash([2, 4]); c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(cx(cam.x), cx(cam.y));
+    c.arc(cx(cam.x), cx(cam.y), r, ang - half, ang + half); c.closePath(); c.stroke(); c.restore();
+  }
+
+  function drawBeacon(c, now) {
+    const x = cx(RECEIVER.x), y = cx(RECEIVER.y), p = reduceMotion.matches ? .5 : (now / 1400) % 1;
+    c.strokeStyle = C.amber;
+    for (let i = 0; i < 2; i++) { const q = (p + i / 2) % 1; c.globalAlpha = (1 - q) * .6; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 6 + q * 20, 0, TAU); c.stroke(); }
+    c.globalAlpha = 1; c.fillStyle = C.amber; diamond(c, x, y, 5); c.fill();
+    c.lineWidth = 3; c.beginPath(); c.arc(x, y, 16, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, state.download / CONFIG.downloadTicks)); c.stroke();
+    label(c, 'RECEIVER', x, y + 30, C.mute, 8);
+  }
+
+  function drawKadeBody(c, now) {
+    const x = cx(TERMINAL.x), y = cx(TERMINAL.y), k = state.kade;
+    const threat = state.hunters.some((h) => h.mode === 'body' || Sim.euclid(h, TERMINAL) <= 4);
+    if (threat && !k.flat) {
+      c.strokeStyle = C.crim; c.lineWidth = 2; c.globalAlpha = reduceMotion.matches ? .8 : .5 + .4 * Math.sin(now / 160);
+      c.beginPath(); c.arc(x, y, 20, 0, TAU); c.stroke(); c.globalAlpha = 1;
+    }
+    c.fillStyle = k.flat ? '#555' : C.amber; c.fillRect(x - 8, y - 8, 16, 16);
+    c.strokeStyle = C.net; c.lineWidth = 2; c.beginPath(); c.moveTo(x + 8, y); c.bezierCurveTo(x + 14, y + 8, x + 8, y + 14, x + 15, y + 15); c.stroke();
+    if (k.flat) { c.strokeStyle = C.ink; c.beginPath(); c.moveTo(x - 6, y - 6); c.lineTo(x + 6, y + 6); c.moveTo(x + 6, y - 6); c.lineTo(x - 6, y + 6); c.stroke(); }
+    label(c, 'KADE', x, y - 15, C.mute, 8);
+  }
+
+  function drawWren(c, p, now) {
+    const w = state.wren, x = cx(p.x), y = cx(p.y), pct = Math.min(1, w.overload / CONFIG.overloadMax);
+    c.save(); c.shadowColor = C.amber; c.shadowBlur = 14; c.fillStyle = C.amber; diamond(c, x, y, 11); c.fill(); c.restore();
+    c.fillStyle = C.ink; diamond(c, x, y, 3); c.fill();
+    c.lineWidth = 3; c.strokeStyle = pct > .75 ? C.crim : C.amber;
+    c.beginPath(); c.arc(x, y, 18, -Math.PI / 2, -Math.PI / 2 + TAU * pct); c.stroke();
+    if (w.masked) { c.save(); c.strokeStyle = C.fg; c.lineWidth = 1.5; c.setLineDash([3, 3]); diamond(c, x, y, 15); c.stroke(); c.restore(); }
+    label(c, 'WREN', x, y + 31, C.amber, 8);
+  }
+
+  function drawHunter(c, h, p, now) {
+    const x = cx(p.x), y = cx(p.y), a = Math.atan2(h.fy, h.fx), stunned = h.stun > 0;
+    c.save(); c.translate(x, y); c.rotate(a);
+    c.fillStyle = stunned ? '#6b6b70' : C.crim;
+    c.beginPath(); c.moveTo(12, 0); c.lineTo(-8, -9); c.lineTo(-4, 0); c.lineTo(-8, 9); c.closePath(); c.fill();
+    c.restore();
+    if (stunned) {
+      c.strokeStyle = C.own; c.lineWidth = 2; c.beginPath();
+      c.moveTo(x - 9, y - 12); c.lineTo(x - 3, y - 7); c.lineTo(x - 1, y - 14); c.lineTo(x + 5, y - 8); c.lineTo(x + 9, y - 13); c.stroke();
+    }
+    const txt = stunned ? 'STUN' : h.mode === 'hunt' ? 'HUNTING' : h.mode === 'body' ? 'TRACING' : '';
+    label(c, `${h.id}${txt ? ' ' + txt : ''}`, x, y + 24, stunned ? C.mute : C.crim, 8);
+  }
+
+  function drawStreet(c, now) {
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.drawImage(bgStreet, 0, 0, VW, VH);
+    for (let i = 0; i < state.hunters.length; i++) {
+      c.fillStyle = state.hunters[i].mode === 'hunt' ? 'rgba(224,70,78,.2)' : 'rgba(224,70,78,.07)';
+      const l = vis.hunter[i];
+      for (let j = 0; j < l.length; j += 2) c.fillRect(l[j] * T, l[j + 1] * T, T, T);
+    }
+    for (let i = 0; i < state.cams.length; i++) {
+      const cam = state.cams[i], l = vis.cam[i], flash = (camFlash[cam.id] || 0) > now;
+      c.fillStyle = flash ? 'rgba(224,70,78,.3)' : 'rgba(240,235,220,.07)';
+      for (let j = 0; j < l.length; j += 2) c.fillRect(l[j] * T, l[j + 1] * T, T, T);
+      drawCamNext(c, cam);
+    }
+    drawDoor(c, 'DR1', now); drawDoor(c, 'DR2', now);
+    drawBeacon(c, now);
+    for (const cam of state.cams) drawCam(c, cam, now);
+    drawKadeBody(c, now);
+    drawTelegraphs(c, now);
+    for (const h of state.hunters) drawHunter(c, h, unitPos(now, h, prevOf(h.id)), now);
+    drawWren(c, unitPos(now, state.wren, prevOf('wren')), now);
+    drawFx(c, now);
+    drawRain(c);
+  }
+
+  function drawTelegraphs(c, now) {
+    if (state.status !== 'play') return;
+    const a = plan.wren, w = state.wren;
+    if (a.type === 'move') {
+      const nx = w.x + DIRS[a.dir][0], ny = w.y + DIRS[a.dir][1];
+      arrow(c, cx(w.x) + DIRS[a.dir][0] * 12, cx(w.y) + DIRS[a.dir][1] * 12, cx(nx) - DIRS[a.dir][0] * 8, cx(ny) - DIRS[a.dir][1] * 8, C.amber, true);
+      c.save(); c.globalAlpha = .45; c.fillStyle = C.amber; diamond(c, cx(nx), cx(ny), 9); c.fill(); c.restore();
+    }
+    for (const h of state.hunters) {
+      if (!h.plan || h.stun > 0) continue;
+      const dx = h.plan.x - h.x, dy = h.plan.y - h.y;
+      arrow(c, cx(h.x) + dx * 12, cx(h.y) + dy * 12, cx(h.plan.x) - dx * 8, cx(h.plan.y) - dy * 8, C.crim, true);
+    }
+  }
+
+  // ---------- fx (spawned from sim events, never inferred from state diffs) ----------
+  function drawFx(c, now) {
+    fx = fx.filter((f) => now - f.t0 < f.dur);
+    for (const f of fx) {
+      const k = Math.max(0, (now - f.t0) / f.dur), x = cx(f.x), y = cx(f.y);
+      c.save(); c.globalAlpha = 1 - k;
+      if (f.kind === 'hit') { c.strokeStyle = C.crim; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 8 + k * 26, 0, TAU); c.stroke(); }
+      else if (f.kind === 'spot') brackets(c, x, y, 24 - k * 6, '#fff');
+      else if (f.kind === 'bump') { c.strokeStyle = C.amber; c.lineWidth = 2; c.strokeRect(x - 18, y - 18, 36, 36); }
+      else if (f.kind === 'hack') { c.strokeStyle = C.own; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 6 + k * 24, 0, TAU); c.stroke(); }
+      c.restore();
+    }
+  }
+  function spawnFx(events, now) {
+    for (const e of events) {
+      if (!e.fx) continue;
+      fx.push({ ...e.fx, t0: now, dur: e.fx.kind === 'spot' ? 600 : 450 });
+      if (e.fx.cam) camFlash[e.fx.cam] = now + 450;
+    }
+  }
+
+  // ---------- net layer ----------
+  function drawNodeShape(c, def, col) {
+    const x = cx(def.x), y = cx(def.y);
+    c.save(); c.shadowColor = col; c.shadowBlur = 10; c.strokeStyle = col; c.lineWidth = 2; c.fillStyle = 'rgba(5,11,24,.9)';
+    if (def.type === 'terminal') { poly(c, x, y, 12, 6, 0); c.fill(); c.stroke(); }
+    else if (def.type === 'junction') { c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill(); c.stroke(); }
+    else if (def.type === 'camera') { c.beginPath(); c.arc(x, y, 10, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.arc(x, y, 3.5, 0, TAU); c.fillStyle = col; c.fill(); }
+    else if (def.type === 'door') { c.fillRect(x - 9, y - 9, 18, 18); c.strokeRect(x - 9, y - 9, 18, 18); }
+    else { poly(c, x, y, 13, 16, 0); c.fill(); c.stroke(); }
+    c.restore();
+  }
+
+  function nodeColor(id) {
+    const def = NODE_DEFS[id];
+    if (def.type === 'ice') return state.ice > 0 ? C.crim : '#666a72';
+    return state.owned.includes(id) ? C.own : C.net;
+  }
+
+  function drawNet(c, now) {
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.drawImage(bgNet, 0, 0, VW, VH);
+    const kn = state.kade.node, off = reduceMotion.matches ? 0 : -now / 50;
+    c.lineWidth = 1.5; c.setLineDash([6, 6]); c.lineDashOffset = off;
+    for (const [a, b] of LINKS) {
+      const A = NODE_DEFS[a], B = NODE_DEFS[b];
+      c.strokeStyle = a === kn || b === kn ? 'rgba(94,224,255,.95)' : 'rgba(94,224,255,.35)';
+      c.beginPath(); c.moveTo(cx(A.x), cx(A.y)); c.lineTo(cx(B.x), cx(B.y)); c.stroke();
+    }
+    c.setLineDash([]);
+    drawNetRange(c, now);
+    for (const id in NODE_DEFS) {
+      const def = NODE_DEFS[id];
+      drawNodeShape(c, def, nodeColor(id));
+      label(c, def.label, cx(def.x), cx(def.y) + 25, nodeColor(id), 8);
+      if (def.type === 'ice') for (let i = 0; i < CONFIG.net.iceLayers; i++) {
+        c.fillStyle = i < state.ice ? C.crim : '#444'; c.fillRect(cx(def.x) - 8 + i * 10, cx(def.y) - 25, 6, 6);
+      }
+    }
+    drawNetWren(c, now); drawNetHunters(c, now); drawKadeMarker(c, now); drawTargets(c, now); drawFx(c, now);
+    c.fillStyle = 'rgba(0,0,0,.18)';
+    for (let y = 0; y < VH; y += 3) c.fillRect(0, y, VW, 1);
+  }
+
+  function drawNetRange(c) {
+    const n = NODE_DEFS[state.kade.node], r = CONFIG.net.burnRange * T;
+    c.save(); c.strokeStyle = 'rgba(94,224,255,.35)'; c.setLineDash([2, 5]); diamond(c, cx(n.x), cx(n.y), r); c.stroke(); c.restore();
+  }
+  function drawNetWren(c, now) {
+    const p = unitPos(now, state.wren, prevOf('wren')), x = cx(p.x), y = cx(p.y);
+    const q = reduceMotion.matches ? .4 : (now / 900) % 1;
+    c.strokeStyle = C.amber; c.globalAlpha = (state.wren.masked ? .2 : .7) * (1 - q); c.lineWidth = 2;
+    c.beginPath(); c.arc(x, y, 5 + q * 22, 0, TAU); c.stroke(); c.globalAlpha = state.wren.masked ? .35 : 1;
+    c.fillStyle = C.amber; c.beginPath(); c.arc(x, y, 4, 0, TAU); c.fill(); c.globalAlpha = 1;
+  }
+  function drawNetHunters(c, now) {
+    for (const h of state.hunters) {
+      const p = unitPos(now, h, prevOf(h.id));
+      c.save(); c.shadowColor = C.crim; c.shadowBlur = 8; c.fillStyle = h.stun ? '#666a72' : C.crim; diamond(c, cx(p.x), cx(p.y), 8); c.fill(); c.restore();
+      label(c, h.id, cx(p.x), cx(p.y) - 13, C.crim, 8);
+    }
+  }
+  function drawKadeMarker(c, now) {
+    const n = NODE_DEFS[state.kade.node], k = state.kade, col = k.shock ? C.crim : C.net;
+    c.strokeStyle = col; c.lineWidth = 2.5; c.globalAlpha = reduceMotion.matches ? 1 : .7 + .3 * Math.sin(now / 200);
+    c.beginPath(); c.arc(cx(n.x), cx(n.y), 19, 0, TAU); c.stroke(); c.globalAlpha = 1;
+    if (k.shock) label(c, `DUMPSHOCK ${k.shock}`, cx(n.x), cx(n.y) - 26, C.crim, 9);
+  }
+  function drawTargets(c, now) {
+    if (state.status !== 'play') return;
+    for (const a of legalK) {
+      if (!Sim.costOf(a)) continue;
+      const tgt = NODE_DEFS[a.target] || state.hunters.find((h) => h.id === a.target);
+      const p = NODE_DEFS[a.target] ? tgt : unitPos(now, tgt, prevOf(tgt.id));
+      brackets(c, cx(p.x), cx(p.y), 17, 'rgba(185,140,255,.55)');
+    }
+    const a = plan.kade, k = NODE_DEFS[state.kade.node];
+    if (a.type === 'route') {
+      const t = NODE_DEFS[a.target], dx = t.x - k.x, dy = t.y - k.y, d = Math.hypot(dx, dy) || 1;
+      arrow(c, cx(k.x) + dx / d * 20, cx(k.y) + dy / d * 20, cx(t.x) - dx / d * 20, cx(t.y) - dy / d * 20, C.net, true);
+    } else if (Sim.costOf(a)) {
+      const tgt = NODE_DEFS[a.target] || state.hunters.find((h) => h.id === a.target);
+      c.save(); c.strokeStyle = C.own; c.lineWidth = 3; c.shadowColor = C.own; c.shadowBlur = 10; c.setLineDash([10, 5]);
+      c.lineDashOffset = reduceMotion.matches ? 0 : -now / 25;
+      c.beginPath(); c.moveTo(cx(k.x), cx(k.y)); c.lineTo(cx(tgt.x), cx(tgt.y)); c.stroke(); c.restore();
+      brackets(c, cx(tgt.x), cx(tgt.y), 20, C.own);
+    }
+  }
+
+  // ---------- composite, wipe, PiP ----------
+  function composite(now) {
+    drawStreet(sctx, now);
+    if (wipe > .001) drawNet(nctx, now);
+    const c = vctx; c.setTransform(1, 0, 0, 1, 0, 0);
+    let jx = 0;
+    if (!reduceMotion.matches && state.wren.overload / CONFIG.overloadMax > .75 && state.status === 'play') {
+      if (now > jitterUntil && (now % 4000) < 20) jitterUntil = now + 120;
+      if (now < jitterUntil) jx = ((now >> 4) & 1 ? 2 : -2) * dpr;
+    }
+    c.clearRect(0, 0, view$.width, view$.height);
+    if (jx) { c.globalAlpha = .6; c.drawImage(streetCv, jx, 0); c.globalAlpha = .6; c.drawImage(streetCv, -jx, 0); c.globalAlpha = 1; }
+    else c.drawImage(streetCv, 0, 0);
+    if (wipe > .001) {
+      const cut = wipe * view$.height;
+      c.save(); c.beginPath(); c.rect(0, 0, view$.width, cut); c.clip(); c.drawImage(netCv, 0, 0); c.restore();
+      if (wipe < .999) {
+        c.save(); c.shadowColor = C.net; c.shadowBlur = 16 * dpr; c.fillStyle = C.net; c.fillRect(0, cut - dpr, view$.width, 2 * dpr); c.restore();
+      }
+    }
+    drawPip(now);
+  }
+
+  function drawPip(now) {
+    const show = wipe > .5;
+    pip$.classList.toggle('show', show);
+    if (!show) return;
+    const threat = state.hunters.some((h) => h.mode === 'body' || Sim.euclid(h, TERMINAL) <= 4);
+    pip$.classList.toggle('alert', threat);
+    const w = 6.4 * T, h = w * pip$.height / pip$.width;
+    const sx = Math.max(0, Math.min(VW - w, cx(TERMINAL.x) - w / 2)), sy = Math.max(0, Math.min(VH - h, cx(TERMINAL.y) - h / 2));
+    pctx.drawImage(streetCv, sx * dpr, sy * dpr, w * dpr, h * dpr, 0, 0, pip$.width, pip$.height);
+  }
+
+  // ---------- HUD ----------
+  const pips = (n, max) => Array.from({ length: max }, (_, i) => `<span class="pip${i < n ? ' on' : ''}"></span>`).join('');
+  const meter = (pct, cls) => `<div class="meter ${cls || ''}" role="meter" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100, pct)}%"></i></div>`;
+  const chip = (t, cls) => `<span class="chip ${cls || ''}">${t}</span>`;
+
+  function hudCards() {
+    const w = state.wren, k = state.kade, pl = CONFIG.payloads[state.payload];
+    const rate = pl.rate, headroom = Math.max(0, Math.ceil((CONFIG.overloadMax - w.overload) / rate) - 1);
+    const hunted = state.hunters.some((h) => h.mode === 'hunt');
+    const hot = w.overload / CONFIG.overloadMax > .75;
+    const wc = $('wrenCard');
+    wc.classList.toggle('shake', hot && !reduceMotion.matches);
+    wc.innerHTML = `<h2 class="disp">WREN <small>courier</small></h2>
+      <div class="row">Body <span class="pips">${pips(w.body, CONFIG.wrenBody)}</span></div>
+      <div class="row">Overload <b>${Math.min(100, Math.round(w.overload))}%</b></div>${meter(w.overload, hot ? 'hot' : '')}
+      <div class="row">Payload <b>${pl.mb} MB · +${rate}/tick</b></div>
+      <div class="row">${state.download > 0 ? 'Download' : 'Headroom'} <b>${state.download > 0 ? `${state.download}/${CONFIG.downloadTicks}` : `${headroom} ticks`}</b></div>
+      <div class="chips">${w.masked ? chip('Masked', 'good') : ''}${hunted ? chip('Hunted', 'bad') : ''}${hot ? chip('Overload critical', 'bad') : ''}</div>`;
+    const threat = state.hunters.some((h) => h.mode === 'body' || Sim.euclid(h, TERMINAL) <= 4);
+    $('kadeCard').innerHTML = `<h2 class="disp">KADE <small>decker</small></h2>
+      <div class="row">Body <span class="pips">${pips(k.body, CONFIG.kadeBody)}</span></div>
+      <div class="row">Neural load <b>${Math.round(k.load)}</b></div>${meter(k.load, 'net' + (k.load >= 80 ? ' hot' : ''))}
+      <div class="row">Trace <b>${Math.round(k.trace)}%</b></div>${meter(k.trace, 'net' + (k.trace >= 80 ? ' hot' : ''))}
+      <div class="chips">${k.flat ? chip('Flatlined', 'bad') : chip(`Jacked in · ${NODE_DEFS[k.node].label}`, 'net')}
+        ${k.shock ? chip(`Dumpshock ${k.shock}`, 'bad') : ''}${threat && !k.flat ? chip('Body under threat', 'bad') : ''}
+        ${state.owned.length ? chip(`${state.owned.length} systems owned`, 'own') : ''}</div>`;
+  }
+
+  function actionLabel(a) {
+    const n = (id) => NODE_DEFS[id].label;
+    return { hold: 'Hold', route: `Route → ${a.target && n(a.target)}`, blind: `Blind ${a.target && n(a.target)}`, unlock: `Unlock ${a.target && n(a.target)}`,
+      ice: 'Break ICE', burn: `Burn implants · ${a.target}` }[a.type];
+  }
+  function wrenLabel(a) { return a.type === 'move' ? `Move ${Sim.DIR_NAMES[a.dir]}` : a.type === 'mask' ? 'Mask (+10 overload)' : 'Wait'; }
+
+  function hudPlan() {
+    $('planW').textContent = wrenLabel(plan.wren);
+    $('planK').textContent = state.kade.flat ? 'Flatlined' : actionLabel(plan.kade);
+    const box = $('actions'); box.classList.toggle('netacts', view === 'net');
+    if (view === 'net') {
+      box.innerHTML = legalK.map((a, i) => {
+        const cost = Sim.costOf(a), warn = cost && state.kade.load + cost.load >= CONFIG.net.loadMax;
+        return `<button data-i="${i}" class="${Sim.sameAction(a, plan.kade) ? 'sel' : ''}"><kbd>${i + 1}</kbd>${actionLabel(a)}
+          <span class="cost">${cost ? `+${cost.load} load +${cost.trace} trace` : '−6 load −2 trace'}</span>${warn ? '<span class="warn">dumpshock</span>' : ''}</button>`;
+      }).join('') || '<span class="cost">Kade is flatlined.</span>';
+    } else {
+      const w = Sim.legalWren(state);
+      box.innerHTML = w.map((a, i) => {
+        const key = a.type === 'move' ? ['W', 'D', 'S', 'A'][a.dir] : a.type === 'mask' ? 'M' : 'X';
+        return `<button data-i="${i}" class="${Sim.sameAction(a, plan.wren) ? 'sel' : ''}"><kbd>${key}</kbd>${wrenLabel(a)}</button>`;
+      }).join('');
+    }
+  }
+
+  function hudLog() {
+    $('log').innerHTML = logLines.slice(0, 80).map((e) =>
+      `<li class="${e.kind}${e.layer === 'NET' ? ' net' : ''}"><span class="t">${e.tick}</span><span class="tag">${e.layer}</span><span class="m">${e.text}</span></li>`).join('');
+  }
+
+  function hud() {
+    hudCards(); hudPlan(); hudLog();
+    $('tickNum').textContent = state.tick;
+    $('runBtn').disabled = state.status !== 'play';
+    $('hint').textContent = view === 'net' ? 'Net · click a node or hunter' : 'Street · meatspace';
+    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === view)));
+  }
+
+  // ---------- actions / flow ----------
+  function setView(v) { view = v; wipeTarget = v === 'net' ? 1 : 0; if (reduceMotion.matches) wipe = wipeTarget; hudPlan(); hud(); }
+
+  function setWren(a) { if (!state || state.status !== 'play') return; plan.wren = a; hudPlan(); }
+  function setKade(a) { if (!state || state.status !== 'play' || !a) return; plan.kade = a; hudPlan(); }
+  const moveWren = (d) => { const a = Sim.legalWren(state).find((l) => l.type === 'move' && l.dir === d); if (a) setWren(a); };
+
+  function snapshotPositions() {
+    const p = { wren: { x: state.wren.x, y: state.wren.y } };
+    for (const h of state.hunters) p[h.id] = { x: h.x, y: h.y };
+    return p;
+  }
+
+  function commit() {
+    if (!state || state.status !== 'play') return;
+    const now = performance.now(), prev = snapshotPositions();
+    const r = Sim.resolveTick(state, plan.wren, plan.kade);
+    state = r.state; anim = { t0: now, prev };
+    for (const e of r.events) logLines.unshift(e);
+    spawnFx(r.events, now);
+    plan = { wren: { type: 'wait' }, kade: { type: 'hold' } };
+    tickStart = now; buildVis(); hud();
+    if (state.status === 'over') endTimer = setTimeout(showEnd, 1100);
+  }
+
+  function showEnd() {
+    const o = state.outcome, ok = o === 'delivered';
+    const text = {
+      delivered: `The receiver has the payload. Wren walks out with ${state.wren.body} body left.`,
+      taken: 'The Syndicate hunters took Wren down and pulled the payload.',
+      flatlined: 'The payload burned Wren out before she reached the receiver.',
+    }[o];
+    $('endEyebrow').textContent = ok ? 'Contract fulfilled' : 'Contract failed';
+    const t = $('endTitle'); t.textContent = o.charAt(0).toUpperCase() + o.slice(1); t.className = `huge disp ${ok ? 'end-ok' : 'end-bad'}`;
+    $('endText').textContent = text;
+    const tile = (l, v) => `<div class="stat"><small>${l}</small><b>${v}</b></div>`;
+    $('endStats').innerHTML = tile('Fee', ok ? `¥${Sim.fee(state).toLocaleString('en-US')}` : '¥0') + tile('Ticks', state.tick)
+      + tile('Camera alerts', state.stats.alerts) + tile('Hacks', state.stats.hacks);
+    $('end').classList.add('show'); $('againBtn').focus();
+  }
+
+  function startRun() {
+    clearTimeout(endTimer);
+    state = Sim.createMatch(prefs.payload);
+    plan = { wren: { type: 'wait' }, kade: { type: 'hold' } };
+    logLines = [{ tick: 1, layer: 'STREET', kind: 'info', text: `Contract open. ${CONFIG.payloads[state.payload].label} load, ${CONFIG.payloads[state.payload].mb} MB.` }];
+    fx = []; camFlash = {}; anim = { t0: -1e9, prev: null };
+    tickStart = performance.now(); buildVis(); setView('street'); wipe = 0; hud();
+    $('start').classList.remove('show'); $('end').classList.remove('show');
+    $('runBtn').focus();
+  }
+
+  function openBrief() { $('start').classList.add('show'); $('startBtn').focus(); }
+
+  // ---------- input ----------
+  const overlayOpen = () => $('start').classList.contains('show') || $('end').classList.contains('show');
+  const KEYS = { w: 0, arrowup: 0, d: 1, arrowright: 1, s: 2, arrowdown: 2, a: 3, arrowleft: 3 };
+  addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || overlayOpen() || !state) return;
+    const k = e.key.toLowerCase(), onControl = e.target instanceof HTMLElement && e.target.closest('button,input');
+    if (k in KEYS) { moveWren(KEYS[k]); e.preventDefault(); }
+    else if (k === 'm') setWren({ type: 'mask' });
+    else if (k === 'x') setWren({ type: 'wait' });
+    else if (k === 'q') setView(view === 'net' ? 'street' : 'net');
+    else if (/^[1-9]$/.test(k)) { if (view === 'net') setKade(legalK[Number(k) - 1]); }
+    else if ((k === ' ' || k === 'enter') && !onControl) { commit(); e.preventDefault(); }
+  });
+
+  $('actions').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    const i = Number(b.dataset.i);
+    if (view === 'net') setKade(legalK[i]); else setWren(Sim.legalWren(state)[i]);
+  });
+  $('dpad').addEventListener('click', (e) => { const b = e.target.closest('button[data-d]'); if (b) moveWren(Number(b.dataset.d)); });
+  document.querySelector('.seg').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (b) setView(b.dataset.v); });
+  $('runBtn').addEventListener('click', commit);
+  $('briefBtn').addEventListener('click', openBrief);
+  $('startBtn').addEventListener('click', startRun);
+  $('againBtn').addEventListener('click', () => { $('end').classList.remove('show'); openBrief(); });
+  $('timed').addEventListener('change', (e) => { prefs.timed = e.target.checked; savePrefs(); tickStart = performance.now(); });
+
+  function canvasPoint(e) {
+    const r = view$.getBoundingClientRect();
+    return { px: (e.clientX - r.left) / r.width * VW, py: (e.clientY - r.top) / r.height * VH };
+  }
+  view$.addEventListener('click', (e) => {
+    if (!state || state.status !== 'play') return;
+    const { px, py } = canvasPoint(e);
+    if (view === 'net') {
+      const near = (x, y, rad) => Math.hypot(px - cx(x), py - cx(y)) < rad;
+      const hunter = legalK.find((a) => a.type === 'burn' && near(state.hunters.find((h) => h.id === a.target).x, state.hunters.find((h) => h.id === a.target).y, 22));
+      if (hunter) return setKade(hunter);
+      const hits = legalK.filter((a) => NODE_DEFS[a.target] && near(NODE_DEFS[a.target].x, NODE_DEFS[a.target].y, 24));
+      setKade(hits.find((a) => a.type !== 'route') || hits[0]);
+    } else {
+      const tx = Math.floor(px / T), ty = Math.floor(py / T), w = state.wren;
+      if (tx === w.x && ty === w.y) return setWren({ type: 'wait' });
+      const d = DIRS.findIndex(([dx, dy]) => w.x + dx === tx && w.y + dy === ty);
+      if (d >= 0) moveWren(d);
+    }
+  });
+
+  // ---------- main loop ----------
+  function frame(now) {
+    if (state) {
+      if (wipe !== wipeTarget) { wipe += (wipeTarget - wipe) * .16; if (Math.abs(wipe - wipeTarget) < .002) wipe = wipeTarget; }
+      composite(now);
+      const left = prefs.timed && state.status === 'play' && !overlayOpen() ? Math.max(0, 1 - (now - tickStart) / TIMER_MS) : 1;
+      const r = Math.round(left * 100);
+      if (r !== lastRing) { $('ringfg').style.strokeDashoffset = String(62.8 * (1 - left)); lastRing = r; }
+      if (prefs.timed && left === 0 && state.status === 'play' && !overlayOpen()) commit();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- boot ----------
+  function buildStartScreen() {
+    $('loads').innerHTML = Object.entries(CONFIG.payloads).map(([key, p]) => `
+      <label><input type="radio" name="load" value="${key}" ${key === prefs.payload ? 'checked' : ''}>
+        <span class="nm disp">${p.label.toUpperCase()}</span>
+        <span class="ln"><span>Size</span><b>${p.mb} MB</b></span>
+        <span class="ln"><span>Overload</span><b>+${p.rate} / tick</b></span>
+        <span class="ln"><span>Fee</span><b>¥${p.fee.toLocaleString('en-US')}</b></span>
+        <span class="nt">${p.note}</span></label>`).join('');
+    $('loads').addEventListener('change', (e) => { prefs.payload = e.target.value; savePrefs(); });
+    $('timed').checked = !!prefs.timed;
+  }
+
+  buildStartScreen();
+  state = Sim.createMatch(prefs.payload); buildVis();
+  logLines = []; hud();
+  buildStreetBg(); buildNetBg();
+  Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]).then(() => {
+    buildStreetBg(); buildNetBg();
+    requestAnimationFrame(frame);
+    $('startBtn').focus();
+  });
+})();
+</script>
+</body>
+</html>
