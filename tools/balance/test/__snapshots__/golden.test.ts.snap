@@ -317,6 +317,7 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
       "body": 2,
       "flat": false,
       "load": 48,
+      "loadout": [],
       "node": "ICE",
       "shock": 1,
       "shockNew": false,
@@ -340,6 +341,7 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
     "tick": 18,
     "wren": {
       "body": 3,
+      "loadout": [],
       "masked": false,
       "overload": 54,
       "x": 13,

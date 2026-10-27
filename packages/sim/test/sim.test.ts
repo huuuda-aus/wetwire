@@ -7,8 +7,10 @@ import {
   distField,
   legalActions,
   legalDeckerActions,
+  loadoutSlotCost,
   resolveTick,
   telegraphs,
+  validateLoadout,
   viewFor,
   fee,
   camFacing,
@@ -122,6 +124,56 @@ describe('Kade meters', () => {
     const r = tick(s, { type: 'wait' }, { type: 'blind', target: 'CAMC' }).state;
     expect(r.kade.shock).toBe(3);
     expect(r.kade.load).toBe(60);
+  });
+
+  it('loadout cost sums known implants and ignores an unknown id for the pure cost function', () => {
+    expect(loadoutSlotCost(content.implants, ['razor-nails', 'mirrorshades'])).toBe(25);
+    expect(loadoutSlotCost(content.implants, ['razor-nails', 'nope'])).toBe(15);
+  });
+
+  it('validateLoadout accepts exactly at capacity and rejects one over the boundary', () => {
+    expect(validateLoadout(content.implants, 15, ['razor-nails']).ok).toBe(true); // cost 15, capacity 15
+    expect(validateLoadout(content.implants, 14, ['razor-nails']).ok).toBe(false); // cost 15, capacity 14
+    const all = content.implants.map((i) => i.id);
+    expect(validateLoadout(content.implants, content.balance.neural.capacity, all).ok).toBe(false);
+  });
+
+  it('validateLoadout rejects an implant id the content does not define', () => {
+    const check = validateLoadout(content.implants, content.balance.neural.capacity, ['not-a-real-implant']);
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/unknown implant/);
+  });
+
+  it('createMatch throws when a starting loadout costs more than the neural budget', () => {
+    const tooMuch = [
+      'mono-whip',
+      'dermal-plating',
+      'ice-pick-deck',
+      'ghost-deck',
+      'quiet-heart',
+      'mirrorshades',
+    ]; // 105
+    expect(() => createMatch(content, { payload: 'standard', kadeLoadout: tooMuch }, 1)).toThrow(
+      /neural budget/,
+    );
+  });
+
+  it('createMatch accepts a loadout within budget and carries it onto the unit', () => {
+    const s = createMatch(content, { payload: 'standard', kadeLoadout: ['razor-nails', 'mirrorshades'] }, 1);
+    expect(s.kade.loadout).toEqual(['razor-nails', 'mirrorshades']);
+  });
+
+  it('installed chrome is attack surface: a Kade with implants dumpshocks at a lower hack load (§7.2)', () => {
+    // No hack this tick, so load decays by 6 (net.decay.load) before the threshold check.
+    const bare = fresh();
+    bare.kade.load = 87;
+    const bareOut = tick(bare, { type: 'wait' }, { type: 'hold' }).state;
+    expect(bareOut.kade.shock).toBe(0); // (87 - 6) = 81, nowhere near 100
+
+    const chromed = createMatch(content, { payload: 'standard', kadeLoadout: ['mono-whip'] }, 1); // 20 slot cost
+    chromed.kade.load = 87;
+    const chromedOut = tick(chromed, { type: 'wait' }, { type: 'hold' }).state;
+    expect(chromedOut.kade.shock).toBe(3); // (87 - 6) + 20 = 101 >= 100, same hack spend as the bare case
   });
 
   it('a dumpshocked Kade can only hold', () => {

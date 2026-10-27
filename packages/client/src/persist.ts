@@ -86,6 +86,6 @@ export function loadMatch(content: Content): MatchSnapshot | null {
 
 export function restoreState(content: Content, saved: MatchSnapshot): MatchState {
   const district = content.districts.find((d) => d.id === saved.districtId) ?? content.district;
-  const rules = buildRuleset(district, content.balance);
+  const rules = buildRuleset(district, content.balance, content.implants);
   return { ...saved.match, rules };
 }

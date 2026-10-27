@@ -1,6 +1,7 @@
 // The tick, in the exact order of PROMPT.md §3.6. Later phases insert steps; they never reorder these
 // without a docs/DECISIONS.md entry.
 import { costOf, isHack, legalCourierActions, legalDeckerActions, sameAction } from './actions.ts';
+import { loadoutSlotCost } from './loadout.ts';
 import {
   bodyApproachTiles,
   distAt,
@@ -260,7 +261,10 @@ export function stepMeters(ctx: TickContext): void {
     k.trace = Math.max(0, k.trace - net.decay.trace);
   }
   if (k.shock > 0 && !k.shockNew) k.shock -= 1;
-  if (k.load >= net.loadMax && !k.flat) {
+  // §7.2: installed chrome is a permanent tax on the same neural budget hacking spends from,
+  // so a Kade carrying implants dumpshocks sooner for the same amount of hacking.
+  const neuralUsed = k.load + loadoutSlotCost(s.rules.implants, k.loadout);
+  if (neuralUsed >= net.loadMax && !k.flat) {
     k.shock = net.overloadShock;
     k.load = net.loadAfterShock;
     emit(ctx, 'KadeDumpshocked', 'NET', 'bad', `Kade overloads, dumpshock ${net.overloadShock}`);

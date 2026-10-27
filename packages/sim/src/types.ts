@@ -1,4 +1,4 @@
-import type { Balance, District, NodeDef } from '@wetwire/content';
+import type { Balance, District, Implant, NodeDef } from '@wetwire/content';
 
 export type PlayerId = string;
 export type Dir = 0 | 1 | 2 | 3;
@@ -14,6 +14,7 @@ export type MatchStatus = 'play' | 'over';
 export interface Ruleset {
   readonly district: District;
   readonly balance: Balance;
+  readonly implants: readonly Implant[];
   readonly cols: number;
   readonly rows: number;
   readonly wall: Uint8Array;
@@ -26,6 +27,9 @@ export interface WrenState extends Pos {
   body: number;
   overload: number;
   masked: boolean;
+  /** Equipped implant ids (§7.4). Permanent slot cost; validated against neural capacity at
+   * match creation, never changes mid-match. */
+  loadout: readonly string[];
 }
 export interface KadeState {
   node: string;
@@ -35,6 +39,8 @@ export interface KadeState {
   shock: number;
   shockNew: boolean;
   flat: boolean;
+  /** Equipped implant ids (§7.4). See WrenState.loadout. */
+  loadout: readonly string[];
 }
 export interface CamState {
   readonly id: string;
@@ -88,6 +94,11 @@ export interface MatchSetup {
   payload: string;
   /** District id from `content.districts`; defaults to `content.district` when omitted or unknown. */
   districtId?: string;
+  /** Implant ids (§7.4). Defaults to no implants. `createMatch` throws if either loadout's
+   * total slot cost exceeds `balance.neural.capacity` — the sim is the only authority there is
+   * without Phase 3's server, so this is the actual rejection point, not just a client check. */
+  wrenLoadout?: readonly string[];
+  kadeLoadout?: readonly string[];
 }
 export interface TickInput {
   actions: Record<PlayerId, Action>;
