@@ -98,8 +98,11 @@ export function StartOverlay({
         <div class="howto">
           <div>
             <h4>Street</h4>
-            <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows move Wren · <kbd>X</kbd> wait ·{' '}
-            <kbd>M</kbd> mask (+10 overload, cameras ignore you, hunters see you only if adjacent).
+            <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows move Wren · <kbd>Shift</kbd>+move
+            sprints 2 tiles (+8 overload) · <kbd>X</kbd> wait · <kbd>M</kbd> mask (+10 overload, cameras
+            ignore you, hunters see you only if adjacent).
+            <br />
+            Razor and her Strike / Heavy strike / Guard actions are buttons below the map.
             <br />
             Red dashed arrows are promises: hunters take exactly that step.
           </div>

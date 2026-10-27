@@ -25,13 +25,31 @@ export function deckerLabel(s: MatchState, a: DeckerAction): string {
 }
 
 export function courierLabel(a: CourierAction): string {
-  if (a.type === 'move') return `Move ${DIR_NAMES[a.dir]}`;
-  return a.type === 'mask' ? 'Mask (+10 overload)' : 'Wait';
+  switch (a.type) {
+    case 'move':
+      return `Move ${DIR_NAMES[a.dir]}`;
+    case 'sprint':
+      return `Sprint ${DIR_NAMES[a.dir]} (+8 overload)`;
+    case 'mask':
+      return 'Mask (+10 overload)';
+    case 'wait':
+      return 'Wait';
+  }
 }
 
 export function razorLabel(a: RazorAction): string {
-  if (a.type === 'move') return `Move ${DIR_NAMES[a.dir]}`;
-  return a.type === 'strike' ? `Strike ${a.target}` : 'Wait';
+  switch (a.type) {
+    case 'move':
+      return `Move ${DIR_NAMES[a.dir]}`;
+    case 'strike':
+      return `Strike ${a.target}`;
+    case 'heavy-strike':
+      return `Heavy strike ${a.target} (2-tick wind-up)`;
+    case 'guard':
+      return `Guard ${a.target === 'wren' ? 'Wren' : 'Kade'}`;
+    case 'wait':
+      return 'Wait';
+  }
 }
 
 export const MOVE_KEYS = ['W', 'D', 'S', 'A'] as const;

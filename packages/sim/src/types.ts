@@ -69,6 +69,13 @@ export interface HunterState extends Pos {
 
 export interface RazorState extends Pos {
   body: number;
+  /** Heavy strike's 2-tick wind-up (§7.3): set when committed, resolved and cleared the next
+   * tick. While set, Razor can only wait — she's locked into the swing. Fizzles with no damage
+   * if the target is out of range or defeated when it resolves (avoidable by moving away). */
+  windup: { target: string } | null;
+  /** Guard (§7.3), reset every tick: who Razor is covering right now. Consumed the same tick
+   * it's set (stepAttacks runs after stepRazor), never persists into the next one. */
+  guarding: PlayerId | null;
 }
 
 export interface MatchState {
@@ -90,14 +97,20 @@ export interface MatchState {
   stats: { alerts: number; hacks: number };
 }
 
-export type CourierAction = { type: 'move'; dir: Dir } | { type: 'wait' } | { type: 'mask' };
+export type CourierAction =
+  { type: 'move'; dir: Dir } | { type: 'wait' } | { type: 'mask' } | { type: 'sprint'; dir: Dir };
 export type HackAction =
   | { type: 'blind'; target: string }
   | { type: 'unlock'; target: string }
   | { type: 'ice'; target: string }
   | { type: 'burn'; target: string };
 export type DeckerAction = { type: 'hold' } | { type: 'route'; target: string } | HackAction;
-export type RazorAction = { type: 'move'; dir: Dir } | { type: 'wait' } | { type: 'strike'; target: string };
+export type RazorAction =
+  | { type: 'move'; dir: Dir }
+  | { type: 'wait' }
+  | { type: 'strike'; target: string }
+  | { type: 'heavy-strike'; target: string }
+  | { type: 'guard'; target: PlayerId };
 export type Action = CourierAction | DeckerAction | RazorAction;
 
 export interface MatchSetup {
@@ -132,7 +145,13 @@ export type GameEventType =
   | 'RazorStruck'
   | 'HunterDefeated'
   | 'RazorHit'
-  | 'RazorDowned';
+  | 'RazorDowned'
+  | 'CourierSprinted'
+  | 'HeavyStrikeWindup'
+  | 'HeavyStrikeLanded'
+  | 'HeavyStrikeMissed'
+  | 'RazorGuarded'
+  | 'RazorBlocked';
 export interface Fx {
   kind: 'hit' | 'spot' | 'bump' | 'hack';
   x: number;

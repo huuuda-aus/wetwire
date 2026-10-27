@@ -24,7 +24,8 @@ export function attachKeyboard(game: Game, sfx: Sfx, blocked: () => boolean): ()
     const onControl = e.target instanceof HTMLElement && e.target.closest('button, input, select') !== null;
     const move = MOVE_KEYS[key];
     if (move !== undefined) {
-      game.moveWren(move);
+      if (e.shiftKey) game.sprintWren(move);
+      else game.moveWren(move);
       e.preventDefault();
     } else if (key === 'm') game.setWrenAction({ type: 'mask' });
     else if (key === 'x') game.setWrenAction({ type: 'wait' });

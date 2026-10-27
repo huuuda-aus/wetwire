@@ -337,6 +337,8 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
     "payload": "standard",
     "razor": {
       "body": 5,
+      "guarding": null,
+      "windup": null,
       "x": 1,
       "y": 9,
     },

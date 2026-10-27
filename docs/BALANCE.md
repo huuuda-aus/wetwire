@@ -28,3 +28,21 @@ The §5.4 bands were measured with the original Phase 1 greedy bot, which the sp
 Why: with the scripted run, hunters decide most matches (Taken), not overload, so payload size barely matters. The original bot must have spent many more ticks on the board, probably sometimes taking the long route, which is where overload bites. I did not fit the bot to the bands, because that would hide the question rather than answer it.
 
 **Needs a director decision:** either describe the original bot's behaviour so I can reproduce it, or accept that these bands apply to a bot we no longer have and set new ones from this runner.
+
+## 2026-10-27 · Phase 4: Razor's kit completed (Sprint, Heavy strike, Guard) — a measured side-effect, not a tuned number
+
+No `balance.json` number was changed to tune this; recording it because CLAUDE.md requires any run that moves a rate out of band to be logged, intended or not, and this one **was not** intended.
+
+| Payload  | Delivered (before) | Delivered (after) | Target  | Verdict (after) |
+| -------- | ------------------ | ----------------- | ------- | --------------- |
+| Light    | 86.0 %             | 80.0 %            | ≥ 85 %  | OUT OF BAND     |
+| Standard | 84.1 %             | 75.4 %            | 55–75 % | OUT OF BAND     |
+| Heavy    | 77.2 %             | 67.7 %            | 25–45 % | OUT OF BAND     |
+
+(2000 matches/payload, same bot skill as the baseline row above: `wrenMistake 0.08`, `kadeLapse 0.10`.)
+
+**Root cause, found before writing this down, not guessed:** `legalCourierActions` now also returns `sprint` entries. The balance bot's deliberate pathing (`greedyWren` in `tools/balance/src/bots.ts`) explicitly filters to `a.type === 'move'` and is unaffected — but the bot's **random-mistake** roll (`wrenMistake`, an 8 %-per-tick chance of picking uniformly at random from Wren's _entire_ legal action list) now sometimes picks a random Sprint instead of a random move. A random Sprint costs more overload (+8, on top of the payload rate) and can carry her two tiles into a worse square than a random single-tile move would, with no danger-avoidance logic applied (that logic only runs in the deliberate path). Delivery rates dropped across all three payloads together, consistent with "mistakes got more expensive," not with any payload-specific effect.
+
+**What this does and doesn't tell us:** it confirms Sprint's addition didn't silently break anything (no crash, no illegal state, the existing golden/parity/property tests all still pass) — but it is **not** a measurement of whether Sprint, Heavy strike or Guard are themselves well-balanced. Nothing in `tools/balance` ever _chooses_ to use them deliberately; the only way they appear in a simulated match is as one of several equally-likely random mistakes. Real balance testing for these three needs a bot that can decide to Sprint to close a gap, Heavy strike instead of Strike when it has a free tick, or Guard when an ally's about to be hit — none of which exists yet. I did not build that bot for this slice (it's a meaningfully sized tool in its own right); flagging it rather than presenting this table as proof of anything about the new kit pieces.
+
+**Not re-tuned to restore the old numbers.** Changing the bot's mistake-weighting to exclude Sprint would hide this finding, not resolve it, so I left it as discovered.

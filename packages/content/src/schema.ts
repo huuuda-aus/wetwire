@@ -133,6 +133,7 @@ export const balanceSchema = z
   .object({
     overloadMax: positive,
     maskCost: z.number().min(0),
+    sprintCost: z.number().min(0),
     wrenBody: z.number().int().positive(),
     kadeBody: z.number().int().positive(),
     cam: z.object({
@@ -150,6 +151,7 @@ export const balanceSchema = z
     razor: z.object({
       body: z.number().int().positive(),
       hitDamage: z.number().int().positive(),
+      heavyHitDamage: z.number().int().positive(),
     }),
     net: z.object({
       decay: cost,

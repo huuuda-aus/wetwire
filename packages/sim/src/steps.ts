@@ -135,14 +135,73 @@ export function stepWren(ctx: TickContext, requested: Action | undefined): void 
         y: w.y + dy,
         cam: null,
       });
+  } else if (a.type === 'sprint') {
+    w.overload += s.rules.balance.sprintCost;
+    const [dx, dy] = dirVec(a.dir);
+    let moved = 0;
+    for (let step = 0; step < 2; step++) {
+      if (!passable(s, w.x + dx, w.y + dy)) break;
+      w.x += dx;
+      w.y += dy;
+      moved += 1;
+    }
+    emit(
+      ctx,
+      'CourierSprinted',
+      'STREET',
+      'info',
+      moved === 2
+        ? 'Wren sprints 2 tiles'
+        : moved === 1
+          ? 'Wren sprints 1 tile, blocked'
+          : 'Wren sprints into a wall',
+    );
   }
 }
 
+function defeatHunter(ctx: TickContext, h: HunterState): void {
+  h.defeated = true;
+  h.mode = 'patrol';
+  h.target = null;
+  h.plan = null;
+  emit(ctx, 'HunterDefeated', 'STREET', 'good', `${h.id} is taken down`);
+}
+
+function strikeHunter(ctx: TickContext, h: HunterState, damage: number, heavy: boolean): void {
+  h.body -= damage;
+  emit(
+    ctx,
+    heavy ? 'HeavyStrikeLanded' : 'RazorStruck',
+    'STREET',
+    'good',
+    `Razor ${heavy ? 'lands a heavy strike on' : 'strikes'} ${h.id} (body ${Math.max(0, h.body)})`,
+    { kind: 'hit', x: h.x, y: h.y, cam: null },
+  );
+  if (h.body <= 0) defeatHunter(ctx, h);
+}
+
 /** Step 2.5 (new in Phase 4, documented insertion — never reorders the original §3.6 steps):
- * Razor's strike, resolved before anyone moves, same as Kade's hacks land before Wren's move. */
+ * Razor's action, resolved before anyone moves, same as Kade's hacks land before Wren's move. */
 export function stepRazor(ctx: TickContext, requested: Action | undefined): void {
   const { s } = ctx;
   const r = s.razor;
+  r.guarding = null; // Guard covers one tick only; never carries over from the last one.
+
+  // A committed heavy strike resolves on its own, ignoring whatever was requested this tick —
+  // she's locked into the swing. Fizzles with no damage if the target left range or went down
+  // in the meantime (avoidable by moving away, same spirit as a telegraphed hunter step).
+  if (r.windup) {
+    const target = r.windup.target;
+    r.windup = null;
+    const h = s.hunters.find((x) => x.id === target);
+    if (h && !h.defeated && manhattan(h, r) <= 1) {
+      strikeHunter(ctx, h, s.rules.balance.razor.heavyHitDamage, true);
+    } else {
+      emit(ctx, 'HeavyStrikeMissed', 'STREET', 'info', "Razor's heavy strike finds nothing there");
+    }
+    return;
+  }
+
   const a = legalRazorActions(s).find((l) => sameAction(l, requested)) ?? { type: 'wait' as const };
   if (a.type === 'move') {
     const [dx, dy] = dirVec(a.dir);
@@ -152,21 +211,22 @@ export function stepRazor(ctx: TickContext, requested: Action | undefined): void
     }
   } else if (a.type === 'strike') {
     const h = s.hunters.find((x) => x.id === a.target);
-    if (!h || h.defeated) return;
-    h.body -= s.rules.balance.razor.hitDamage;
-    emit(ctx, 'RazorStruck', 'STREET', 'good', `Razor strikes ${h.id} (body ${Math.max(0, h.body)})`, {
+    if (h && !h.defeated) strikeHunter(ctx, h, s.rules.balance.razor.hitDamage, false);
+  } else if (a.type === 'heavy-strike') {
+    r.windup = { target: a.target };
+    const h = must(
+      s.hunters.find((x) => x.id === a.target),
+      'heavy strike target',
+    );
+    emit(ctx, 'HeavyStrikeWindup', 'STREET', 'info', `Razor winds up a heavy strike on ${h.id}`, {
       kind: 'hit',
       x: h.x,
       y: h.y,
       cam: null,
     });
-    if (h.body <= 0) {
-      h.defeated = true;
-      h.mode = 'patrol';
-      h.target = null;
-      h.plan = null;
-      emit(ctx, 'HunterDefeated', 'STREET', 'good', `${h.id} is taken down`);
-    }
+  } else if (a.type === 'guard') {
+    r.guarding = a.target;
+    emit(ctx, 'RazorGuarded', 'STREET', 'info', `Razor guards ${a.target === 'wren' ? 'Wren' : 'Kade'}`);
   }
 }
 
@@ -231,14 +291,25 @@ function hitKade(ctx: TickContext, h: HunterState): void {
   const { s } = ctx;
   const { net, hunter } = s.rules.balance;
   const k = s.kade;
+  const t = s.rules.district.terminal;
+  h.mode = 'patrol';
+  h.target = null;
+  h.stun = hunter.stunTicks;
+  if (s.razor.guarding === 'kade') {
+    s.razor.guarding = null; // blocks the next hit, singular -- consumed, not a tick-long shield
+    emit(ctx, 'RazorBlocked', 'STREET', 'good', `Razor blocks ${h.id}'s hit on Kade`, {
+      kind: 'hit',
+      x: t.x,
+      y: t.y,
+      cam: null,
+    });
+    return;
+  }
   k.body -= 1;
   k.shock = net.bodyHitShock;
   k.shockNew = true;
   k.trace = 0;
   k.load = Math.max(k.load, net.bodyHitLoadFloor);
-  h.mode = 'patrol';
-  h.target = null;
-  h.stun = hunter.stunTicks;
   if (k.body <= 0) {
     k.flat = true;
     k.shock = 0;
@@ -246,7 +317,6 @@ function hitKade(ctx: TickContext, h: HunterState): void {
   const text = k.flat
     ? `${h.id} flatlines Kade`
     : `${h.id} reaches Kade's body, dumpshock ${net.bodyHitShock}`;
-  const t = s.rules.district.terminal;
   emit(ctx, 'KadeHit', 'STREET', 'bad', text, { kind: 'hit', x: t.x, y: t.y, cam: null });
 }
 
@@ -272,14 +342,24 @@ export function stepAttacks(ctx: TickContext): void {
   for (const h of s.hunters) {
     if (h.defeated || h.stun > 0) continue;
     if (manhattan(h, s.wren) <= 1) {
-      s.wren.body -= hunter.hitDamage;
       h.stun = hunter.stunTicks;
-      emit(ctx, 'CourierHit', 'STREET', 'bad', `${h.id} hits Wren (body ${Math.max(0, s.wren.body)})`, {
-        kind: 'hit',
-        x: s.wren.x,
-        y: s.wren.y,
-        cam: null,
-      });
+      if (s.razor.guarding === 'wren') {
+        s.razor.guarding = null; // blocks the next hit, singular -- consumed, not a tick-long shield
+        emit(ctx, 'RazorBlocked', 'STREET', 'good', `Razor blocks ${h.id}'s hit on Wren`, {
+          kind: 'hit',
+          x: s.wren.x,
+          y: s.wren.y,
+          cam: null,
+        });
+      } else {
+        s.wren.body -= hunter.hitDamage;
+        emit(ctx, 'CourierHit', 'STREET', 'bad', `${h.id} hits Wren (body ${Math.max(0, s.wren.body)})`, {
+          kind: 'hit',
+          x: s.wren.x,
+          y: s.wren.y,
+          cam: null,
+        });
+      }
     } else if (s.razor.body > 0 && manhattan(h, s.razor) <= 1) {
       hitRazor(ctx, h);
     } else if (h.mode === 'body' && !s.kade.flat && manhattan(h, s.rules.district.terminal) <= 1)

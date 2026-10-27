@@ -19,25 +19,35 @@ export const RAZOR: PlayerId = 'razor';
 const DIRS4: readonly Dir[] = [0, 1, 2, 3];
 
 export function legalCourierActions(s: MatchState): CourierAction[] {
-  const moves: CourierAction[] = DIRS4.filter((d) => {
+  const open = DIRS4.filter((d) => {
     const [dx, dy] = dirVec(d);
     return !isWall(s.rules, s.wren.x + dx, s.wren.y + dy);
-  }).map((dir) => ({ type: 'move', dir }));
-  return [...moves, { type: 'wait' }, { type: 'mask' }];
+  });
+  const moves: CourierAction[] = open.map((dir) => ({ type: 'move', dir }));
+  // Offered on the same condition as a plain move; whether the second tile also clears is
+  // resolved at tick time (steps.ts), same as a move can bump a locked door.
+  const sprints: CourierAction[] = open.map((dir) => ({ type: 'sprint', dir }));
+  return [...moves, ...sprints, { type: 'wait' }, { type: 'mask' }];
 }
 
 export function legalRazorActions(s: MatchState): RazorAction[] {
   // body <= 0: downed, not dead — she simply can't act for the rest of the match (no respawn
   // system yet, §7.5). This never ends the match: only the payload's own outcomes do that.
   if (s.razor.body <= 0) return [{ type: 'wait' }];
+  // Mid-swing on a heavy strike: locked in, same pattern as a stunned hunter or a dumpshocked
+  // Kade. The strike resolves on its own in stepRazor regardless of what's requested.
+  if (s.razor.windup) return [{ type: 'wait' }];
   const moves: RazorAction[] = DIRS4.filter((d) => {
     const [dx, dy] = dirVec(d);
     return !isWall(s.rules, s.razor.x + dx, s.razor.y + dy);
   }).map((dir) => ({ type: 'move', dir }));
-  const strikes: RazorAction[] = s.hunters
-    .filter((h) => !h.defeated && manhattan(h, s.razor) <= 1)
-    .map((h) => ({ type: 'strike', target: h.id }));
-  return [...moves, ...strikes, { type: 'wait' }];
+  const targets = s.hunters.filter((h) => !h.defeated && manhattan(h, s.razor) <= 1);
+  const strikes: RazorAction[] = targets.map((h) => ({ type: 'strike', target: h.id }));
+  const heavyStrikes: RazorAction[] = targets.map((h) => ({ type: 'heavy-strike', target: h.id }));
+  const guards: RazorAction[] = [];
+  if (manhattan(s.razor, s.wren) <= 1) guards.push({ type: 'guard', target: WREN });
+  if (manhattan(s.razor, s.rules.district.terminal) <= 1) guards.push({ type: 'guard', target: KADE });
+  return [...moves, ...strikes, ...heavyStrikes, ...guards, { type: 'wait' }];
 }
 
 export function legalDeckerActions(s: MatchState): DeckerAction[] {
@@ -83,11 +93,11 @@ export function costOf(s: MatchState, a: Action): Cost | null {
   return isHack(a) ? s.rules.balance.net.costs[a.type] : null;
 }
 
+const dirOf = (a: Action): Dir | null => (a.type === 'move' || a.type === 'sprint' ? a.dir : null);
+
 export function sameAction(a: Action | undefined, b: Action | undefined): boolean {
   if (!a || !b || a.type !== b.type) return false;
   const ta = 'target' in a ? a.target : null;
   const tb = 'target' in b ? b.target : null;
-  const da = a.type === 'move' ? a.dir : null;
-  const db = b.type === 'move' ? b.dir : null;
-  return ta === tb && da === db;
+  return ta === tb && dirOf(a) === dirOf(b);
 }

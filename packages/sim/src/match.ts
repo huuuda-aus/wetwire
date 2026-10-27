@@ -95,7 +95,13 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
     },
     // No dedicated spawn marker in district content yet (§ decisions): Razor starts at Wren's
     // own start tile.
-    razor: { x: district.wrenStart.x, y: district.wrenStart.y, body: balance.razor.body },
+    razor: {
+      x: district.wrenStart.x,
+      y: district.wrenStart.y,
+      body: balance.razor.body,
+      windup: null,
+      guarding: null,
+    },
     doors: Object.fromEntries(district.doors.map((d) => [d.id, false])),
     ice: balance.net.iceLayers,
     owned: [],
@@ -137,7 +143,7 @@ function cloneState(s: MatchState): MatchState {
     ...s,
     wren: { ...s.wren },
     kade: { ...s.kade },
-    razor: { ...s.razor },
+    razor: { ...s.razor, windup: s.razor.windup && { ...s.razor.windup } },
     doors: { ...s.doors },
     owned: [...s.owned],
     cams: s.cams.map((c) => ({ ...c })),

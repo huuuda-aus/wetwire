@@ -160,6 +160,10 @@ export class Game {
     this.setWrenAction(this.legalWren.find((a) => a.type === 'move' && a.dir === dir));
   }
 
+  sprintWren(dir: 0 | 1 | 2 | 3): void {
+    this.setWrenAction(this.legalWren.find((a) => a.type === 'sprint' && a.dir === dir));
+  }
+
   commit(now: number): void {
     if (!this.running || this.state.status !== 'play') return;
     this.prev.clear();
