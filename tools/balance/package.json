@@ -1,0 +1,14 @@
+{
+  "name": "@wetwire/balance",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "balance": "node --experimental-strip-types src/run.ts"
+  },
+  "dependencies": {
+    "@wetwire/content": "workspace:*",
+    "@wetwire/sim": "workspace:*",
+    "pure-rand": "8.4.2"
+  }
+}

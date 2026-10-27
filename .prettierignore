@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+index.html
+PROMPT.md
+CLAUDE.md
+tests
