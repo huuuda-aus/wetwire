@@ -1,0 +1,48 @@
+{
+  "overloadMax": 100,
+  "maskCost": 10,
+  "wrenBody": 3,
+  "kadeBody": 2,
+  "cam": { "range": 6, "cos": 0.8, "turnEvery": 2 },
+  "hunter": { "sight": 4.5, "memory": 6, "stunTicks": 2, "hitDamage": 1 },
+  "net": {
+    "decay": { "load": 6, "trace": 2 },
+    "costs": {
+      "blind": { "load": 15, "trace": 12 },
+      "unlock": { "load": 20, "trace": 15 },
+      "ice": { "load": 15, "trace": 10 },
+      "burn": { "load": 30, "trace": 25 }
+    },
+    "burnRange": 4,
+    "bodyThreatRange": 4,
+    "blindTicks": 4,
+    "burnStun": 2,
+    "iceLayers": 2,
+    "loadMax": 100,
+    "traceMax": 100,
+    "overloadShock": 3,
+    "loadAfterShock": 60,
+    "bodyHitShock": 4,
+    "bodyHitLoadFloor": 70
+  },
+  "downloadTicks": 2,
+  "fee": { "base": 0.55, "perBody": 0.15, "round": 100 },
+  "defaultPayload": "standard",
+  "payloads": {
+    "light": {
+      "label": "Light",
+      "mb": 160,
+      "rate": 2,
+      "fee": 12000,
+      "note": "Plenty of time for the long way"
+    },
+    "standard": {
+      "label": "Standard",
+      "mb": 320,
+      "rate": 3,
+      "fee": 28000,
+      "note": "Long route works if nothing goes wrong"
+    },
+    "heavy": { "label": "Heavy", "mb": 640, "rate": 4, "fee": 60000, "note": "Needs both doors; no margin" }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "ironbridge-dock-row",
+  "name": "Ironbridge Sprawl · Dock Row",
+  "rows": [
+    "################",
+    "#..............#",
+    "#.####...#####.#",
+    "#.###.....#....#",
+    "#.###..#..#..R.#",
+    "#.###.....D....#",
+    "#...#..#..#....#",
+    "#...#.....######",
+    "#...D.....######",
+    "#S.T#.....######",
+    "################"
+  ],
+  "wrenStart": { "x": 1, "y": 9 },
+  "terminal": { "x": 3, "y": 9 },
+  "receiver": { "x": 13, "y": 4 },
+  "doors": [
+    { "id": "DR1", "name": "DOOR-1", "x": 10, "y": 5 },
+    { "id": "DR2", "name": "DOOR-2", "x": 4, "y": 8 }
+  ],
+  "nodes": [
+    { "id": "TERM", "x": 3, "y": 9, "type": "terminal", "label": "TERM", "ctl": null },
+    { "id": "DR2", "x": 4, "y": 8, "type": "door", "label": "DOOR-2", "ctl": "DR2" },
+    { "id": "JX1", "x": 4, "y": 6, "type": "junction", "label": "JX-1", "ctl": null },
+    { "id": "CAMA", "x": 1, "y": 1, "type": "camera", "label": "CAM-A", "ctl": "CAM-A" },
+    { "id": "CAMC", "x": 9, "y": 9, "type": "camera", "label": "CAM-C", "ctl": "CAM-C" },
+    { "id": "JX2", "x": 9, "y": 2, "type": "junction", "label": "JX-2", "ctl": null },
+    { "id": "CAMB", "x": 14, "y": 1, "type": "camera", "label": "CAM-B", "ctl": "CAM-B" },
+    { "id": "ICE", "x": 10, "y": 3, "type": "ice", "label": "ICE", "ctl": null },
+    { "id": "DR1", "x": 10, "y": 5, "type": "door", "label": "DOOR-1", "ctl": "DR1" }
+  ],
+  "links": [
+    ["TERM", "DR2"],
+    ["TERM", "JX1"],
+    ["JX1", "CAMA"],
+    ["JX1", "CAMC"],
+    ["JX1", "JX2"],
+    ["JX2", "CAMB"],
+    ["JX2", "ICE"],
+    ["ICE", "DR1"]
+  ],
+  "cams": [
+    { "id": "CAM-A", "node": "CAMA", "x": 1, "y": 1, "dirs": [1, 2] },
+    { "id": "CAM-B", "node": "CAMB", "x": 14, "y": 1, "dirs": [3, 2] },
+    { "id": "CAM-C", "node": "CAMC", "x": 9, "y": 9, "dirs": [0, 3] }
+  ],
+  "hunters": [
+    {
+      "id": "H-1",
+      "x": 8,
+      "y": 1,
+      "face": 1,
+      "wps": [
+        [13, 1],
+        [2, 1]
+      ],
+      "wpi": 0
+    },
+    {
+      "id": "H-2",
+      "x": 9,
+      "y": 6,
+      "face": 0,
+      "wps": [
+        [5, 3],
+        [9, 3],
+        [9, 8],
+        [5, 8]
+      ],
+      "wpi": 1
+    }
+  ]
+}
