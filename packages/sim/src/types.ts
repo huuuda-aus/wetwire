@@ -86,6 +86,8 @@ export type Action = CourierAction | DeckerAction;
 
 export interface MatchSetup {
   payload: string;
+  /** District id from `content.districts`; defaults to `content.district` when omitted or unknown. */
+  districtId?: string;
 }
 export interface TickInput {
   actions: Record<PlayerId, Action>;

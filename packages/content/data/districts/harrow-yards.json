@@ -1,0 +1,72 @@
+{
+  "id": "harrow-yards",
+  "name": "Ironbridge Sprawl · Harrow Yards",
+  "rows": [
+    "###################",
+    "#....#...#........#",
+    "#...........R.....#",
+    "#....#...#........#",
+    "#.................#",
+    "#.................#",
+    "#######D####D###.##",
+    "#.................#",
+    "#...#....#.....#..#",
+    "#.ST#....#.....#..#",
+    "#.................#",
+    "###################"
+  ],
+  "wrenStart": { "x": 2, "y": 9 },
+  "terminal": { "x": 3, "y": 9 },
+  "receiver": { "x": 12, "y": 2 },
+  "doors": [
+    { "id": "DR1", "name": "DOOR-1", "x": 12, "y": 6 },
+    { "id": "DR2", "name": "DOOR-2", "x": 7, "y": 6 }
+  ],
+  "nodes": [
+    { "id": "TERM", "x": 3, "y": 9, "type": "terminal", "label": "TERM", "ctl": null },
+    { "id": "JX1", "x": 2, "y": 7, "type": "junction", "label": "JX-1", "ctl": null },
+    { "id": "CAMB", "x": 10, "y": 8, "type": "camera", "label": "CAM-B", "ctl": "CAM-B" },
+    { "id": "JX2", "x": 9, "y": 7, "type": "junction", "label": "JX-2", "ctl": null },
+    { "id": "CAMA", "x": 16, "y": 4, "type": "camera", "label": "CAM-A", "ctl": "CAM-A" },
+    { "id": "DR2", "x": 7, "y": 6, "type": "door", "label": "DOOR-2", "ctl": "DR2" },
+    { "id": "ICE", "x": 12, "y": 7, "type": "ice", "label": "ICE", "ctl": null },
+    { "id": "DR1", "x": 12, "y": 6, "type": "door", "label": "DOOR-1", "ctl": "DR1" }
+  ],
+  "links": [
+    ["TERM", "JX1"],
+    ["JX1", "CAMB"],
+    ["JX1", "JX2"],
+    ["JX2", "CAMA"],
+    ["JX2", "DR2"],
+    ["JX2", "ICE"],
+    ["ICE", "DR1"]
+  ],
+  "cams": [
+    { "id": "CAM-A", "node": "CAMA", "x": 16, "y": 4, "dirs": [0, 2] },
+    { "id": "CAM-B", "node": "CAMB", "x": 10, "y": 8, "dirs": [0, 1] }
+  ],
+  "hunters": [
+    {
+      "id": "H-1",
+      "x": 4,
+      "y": 1,
+      "face": 1,
+      "wps": [
+        [14, 1],
+        [4, 1]
+      ],
+      "wpi": 0
+    },
+    {
+      "id": "H-2",
+      "x": 16,
+      "y": 1,
+      "face": 2,
+      "wps": [
+        [16, 10],
+        [16, 1]
+      ],
+      "wpi": 0
+    }
+  ]
+}

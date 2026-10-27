@@ -13,7 +13,7 @@ import {
   stepWren,
   type TickContext,
 } from './steps.ts';
-import type { Content } from '@wetwire/content';
+import type { Balance, Content, District } from '@wetwire/content';
 import type {
   MatchSetup,
   MatchState,
@@ -26,7 +26,7 @@ import type {
 } from './types.ts';
 import { must } from './util.ts';
 
-export function buildRuleset({ district, balance }: Content): Ruleset {
+export function buildRuleset(district: District, balance: Balance): Ruleset {
   const cols = must(district.rows[0], 'map row').length;
   const rows = district.rows.length;
   const wall = new Uint8Array(cols * rows);
@@ -44,9 +44,16 @@ export function buildRuleset({ district, balance }: Content): Ruleset {
   return { district, balance, cols, rows, wall, doorGrid, nodes, neighbours };
 }
 
+/** Picks `setup.districtId` from `content.districts`; falls back to `content.district` if omitted or unknown. */
+function resolveDistrict(content: Content, setup: MatchSetup): District {
+  if (setup.districtId === undefined) return content.district;
+  return content.districts.find((d) => d.id === setup.districtId) ?? content.district;
+}
+
 export function createMatch(content: Content, setup: MatchSetup, seed: number): MatchState {
-  const rules = buildRuleset(content);
-  const { district, balance } = content;
+  const district = resolveDistrict(content, setup);
+  const { balance } = content;
+  const rules = buildRuleset(district, balance);
   const payload = setup.payload in balance.payloads ? setup.payload : balance.defaultPayload;
   const s: MatchState = {
     rules,

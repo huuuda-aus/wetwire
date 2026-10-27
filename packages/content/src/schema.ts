@@ -50,6 +50,34 @@ const districtShape = z.object({
 
 type DistrictShape = z.infer<typeof districtShape>;
 
+/** BFS with every door treated as open: a sanity check that the map is not simply disconnected. */
+function reachableWithDoorsOpen(rows: readonly string[], from: { x: number; y: number }): Set<string> {
+  const h = rows.length;
+  const w = rows[0]?.length ?? 0;
+  const seen = new Set<string>([`${from.x},${from.y}`]);
+  const queue: [number, number][] = [[from.x, from.y]];
+  for (let i = 0; i < queue.length; i++) {
+    const point = queue[i];
+    if (!point) continue;
+    const [x, y] = point;
+    for (const [dx, dy] of [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ]) {
+      const nx = x + (dx ?? 0);
+      const ny = y + (dy ?? 0);
+      const key = `${nx},${ny}`;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen.has(key)) continue;
+      if (rows[ny]?.[nx] === '#') continue;
+      seen.add(key);
+      queue.push([nx, ny]);
+    }
+  }
+  return seen;
+}
+
 function checkDistrict(d: DistrictShape, ctx: z.RefinementCtx): void {
   const fail = (message: string): void => {
     ctx.addIssue({ code: 'custom', message });
@@ -64,12 +92,34 @@ function checkDistrict(d: DistrictShape, ctx: z.RefinementCtx): void {
   const ids = new Set(d.nodes.map((n) => n.id));
   for (const [a, b] of d.links) if (!ids.has(a) || !ids.has(b)) fail(`link ${a}-${b} names an unknown node`);
   for (const cam of d.cams) if (!ids.has(cam.node)) fail(`camera ${cam.id} names an unknown node`);
-  for (const h of d.hunters) if (h.wpi >= h.wps.length) fail(`hunter ${h.id} waypoint index is out of range`);
+  for (const h of d.hunters) {
+    if (h.wpi >= h.wps.length) fail(`hunter ${h.id} waypoint index is out of range`);
+    if (tile(h.x, h.y) === '#') fail(`hunter ${h.id} starts inside a wall`);
+  }
+  const reachable = reachableWithDoorsOpen(d.rows, d.wrenStart);
+  if (!reachable.has(`${d.receiver.x},${d.receiver.y}`)) {
+    fail('receiver is unreachable from wrenStart even with every door open');
+  }
+  for (const h of d.hunters) {
+    if (tile(h.x, h.y) !== '#' && !reachable.has(`${h.x},${h.y}`)) {
+      fail(`hunter ${h.id} starts in a pocket disconnected from wrenStart`);
+    }
+  }
 }
 
 export const districtSchema = districtShape.superRefine(checkDistrict);
 export type District = z.infer<typeof districtSchema>;
 export type NodeDef = z.infer<typeof nodeSchema>;
+
+function checkDistrictIdsUnique(districts: District[], ctx: z.RefinementCtx): void {
+  const seen = new Set<string>();
+  for (const d of districts) {
+    if (seen.has(d.id)) ctx.addIssue({ code: 'custom', message: `duplicate district id "${d.id}"` });
+    seen.add(d.id);
+  }
+}
+
+export const districtsSchema = z.array(districtSchema).min(1).superRefine(checkDistrictIdsUnique);
 
 const payloadSchema = z.object({
   label: z.string().min(1),

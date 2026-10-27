@@ -37,6 +37,21 @@ describe('district geometry', () => {
     expect(route(s, true, true)).toBe(17);
   });
 
+  it('createMatch picks a district by id, defaulting to content.district', () => {
+    const named = createMatch(content, { payload: 'standard', districtId: 'harrow-yards' }, 1);
+    expect(named.rules.district.id).toBe('harrow-yards');
+    const unknown = createMatch(content, { payload: 'standard', districtId: 'nope' }, 1);
+    expect(unknown.rules.district.id).toBe(content.district.id);
+    const omitted = createMatch(content, { payload: 'standard' }, 1);
+    expect(omitted.rules.district.id).toBe(content.district.id);
+  });
+
+  it('harrow-yards route is 25 moves with both doors locked and 17 with both open', () => {
+    const s = createMatch(content, { payload: 'standard', districtId: 'harrow-yards' }, 1);
+    expect(route(s, false, false)).toBe(25);
+    expect(route(s, true, true)).toBe(17);
+  });
+
   it('camera facing turns every two ticks', () => {
     const s = fresh();
     expect([1, 2, 3, 4, 5].map((t) => camFacing(s, 0, t))).toEqual([1, 1, 2, 2, 1]);
