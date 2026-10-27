@@ -630,6 +630,11 @@ button {
   font-size: 26px;
   letter-spacing: 0.1em;
 }
+.startRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

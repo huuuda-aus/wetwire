@@ -29,6 +29,8 @@ export function App() {
     sfx.setVolume(game.prefs.volume);
   }, [game.prefs.volume, game, sfx]);
 
+  const canResume = game.running && game.state.status === 'play';
+
   const start = (payload: string, districtId: string): void => {
     sfx.unlock();
     game.start(payload, performance.now(), districtId);
@@ -54,7 +56,13 @@ export function App() {
           <Legend />
         </aside>
       </main>
-      <StartOverlay game={game} open={briefOpen} onStart={start} />
+      <StartOverlay
+        game={game}
+        open={briefOpen}
+        canResume={canResume}
+        onStart={start}
+        onResume={() => setBriefOpen(false)}
+      />
       <EndOverlay game={game} onAgain={() => setBriefOpen(true)} />
     </>
   );

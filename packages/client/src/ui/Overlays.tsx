@@ -5,11 +5,17 @@ import type { Game } from '../game.ts';
 export function StartOverlay({
   game,
   open,
+  canResume,
   onStart,
+  onResume,
 }: {
   game: Game;
   open: boolean;
+  /** True when there's an in-progress match to go back to, so the brief acts as a pause menu
+   * rather than a dead end that forces a restart. */
+  canResume: boolean;
   onStart: (payload: string, districtId: string) => void;
+  onResume: () => void;
 }) {
   const [payload, setPayload] = useState(game.prefs.payload);
   const [districtId, setDistrictId] = useState(game.state.rules.district.id);
@@ -17,6 +23,14 @@ export function StartOverlay({
   useEffect(() => {
     if (open) btn.current?.focus();
   }, [open]);
+  useEffect(() => {
+    if (!open || !canResume) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onResume();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, canResume, onResume]);
   return (
     <div
       class={open ? 'ov show' : 'ov'}
@@ -97,9 +111,24 @@ export function StartOverlay({
             <kbd>Space</kbd> / <kbd>Enter</kbd> runs the tick.
           </div>
         </div>
-        <button class="go disp" ref={btn} onClick={() => onStart(payload, districtId)}>
-          START RUN
-        </button>
+        <div class="startRow">
+          {canResume && (
+            <button class="btn" onClick={onResume}>
+              RESUME · ESC
+            </button>
+          )}
+          <button
+            class="go disp"
+            ref={btn}
+            onClick={() => {
+              if (canResume && !confirm('Start a new run? Your current contract in progress will be lost.'))
+                return;
+              onStart(payload, districtId);
+            }}
+          >
+            {canResume ? 'RESTART RUN' : 'START RUN'}
+          </button>
+        </div>
       </div>
     </div>
   );
