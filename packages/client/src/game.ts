@@ -17,7 +17,7 @@ import {
 } from '@wetwire/sim';
 import { clearMatch, loadMatch, restoreState, saveMatch } from './persist.ts';
 import { loadPrefs, savePrefs, type Prefs } from './prefs.ts';
-import { loadProgress, recordDelivery, type Progress } from './progress.ts';
+import { dismissTutorial, loadProgress, recordDelivery, type Progress } from './progress.ts';
 
 export type View = 'street' | 'net';
 export interface Plan {
@@ -194,7 +194,14 @@ export class Game {
     if (this.state.status === 'over') {
       clearMatch();
       if (this.state.outcome === 'delivered') this.progress = recordDelivery(this.progress);
+      this.progress = dismissTutorial(this.progress);
     } else this.persist();
+  }
+
+  dismissTutorial(): void {
+    this.progress = dismissTutorial(this.progress);
+    this.version += 1;
+    for (const fn of this.listeners) fn();
   }
 
   /** Saves just enough to resume after a reload: the match state, the in-progress plan, the

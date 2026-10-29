@@ -164,7 +164,12 @@ export function Actions({ game }: { game: Game }) {
   return (
     <div class="actions">
       {game.legalWren.map((a, i) => (
-        <button key={i} class={sameAction(a, plan.wren) ? 'sel' : ''} onClick={() => game.setWrenAction(a)}>
+        <button
+          key={i}
+          class={sameAction(a, plan.wren) ? 'sel' : ''}
+          data-action-type={a.type}
+          onClick={() => game.setWrenAction(a)}
+        >
           <kbd>
             {a.type === 'move'
               ? MOVE_KEYS[a.dir]

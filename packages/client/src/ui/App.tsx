@@ -7,6 +7,7 @@ import { useGame } from './hooks.ts';
 import { EndOverlay, StartOverlay } from './Overlays.tsx';
 import { KadeCard, Legend, LogPanel, RazorCard, WrenCard } from './Panels.tsx';
 import { Stage } from './Stage.tsx';
+import { Tutorial } from './Tutorial.tsx';
 
 export function App() {
   const game = useMemo(() => new Game(), []);
@@ -66,6 +67,7 @@ export function App() {
         onResume={() => setBriefOpen(false)}
       />
       <EndOverlay game={game} onAgain={() => setBriefOpen(true)} />
+      {!briefOpen && <Tutorial game={game} />}
     </>
   );
 }

@@ -758,3 +758,56 @@ button {
 .stage canvas {
   display: block;
 }
+.tutorial {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.tutorial-ring {
+  position: fixed;
+  border: 2px solid var(--amber);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 3px rgba(240, 180, 60, 0.25),
+    0 0 18px rgba(240, 180, 60, 0.4);
+  transition:
+    top 0.2s ease,
+    left 0.2s ease,
+    width 0.2s ease,
+    height 0.2s ease;
+}
+.tutorial-callout {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  background: var(--panel);
+  border: 1px solid var(--amber);
+  border-radius: 6px;
+  padding: 12px 14px;
+  pointer-events: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.tutorial-callout.centre {
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.tutorial-callout p {
+  margin: 0 0 10px;
+  color: var(--fg);
+}
+.tutorial-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tutorial-step {
+  color: var(--mute);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: auto;
+}
