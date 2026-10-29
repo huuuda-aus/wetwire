@@ -1,5 +1,6 @@
 import balanceJson from '../data/balance.json' with { type: 'json' };
 import harrowYardsJson from '../data/districts/harrow-yards.json' with { type: 'json' };
+import { generatedDistricts } from '../data/districts/generated/index.ts';
 import implantsJson from '../data/implants.json' with { type: 'json' };
 import districtJson from '../data/ironbridge-dock-row.json' with { type: 'json' };
 import rolesJson from '../data/roles.json' with { type: 'json' };
@@ -17,8 +18,10 @@ import {
 export * from './schema.ts';
 
 /** Every district this build ships. Add a file to `data/districts/` (or the legacy top-level
- * path) and list it here to make it playable. */
-const ALL_DISTRICTS: readonly unknown[] = [districtJson, harrowYardsJson];
+ * path) and list it here to make it playable. Generated candidates saved by
+ * `pnpm --filter @wetwire/content gen-maps` are picked up automatically via `generatedDistricts`
+ * (kept for review; a future tool will prune the ones we don't want to keep). */
+const ALL_DISTRICTS: readonly unknown[] = [districtJson, harrowYardsJson, ...generatedDistricts];
 const DEFAULT_DISTRICT_ID = 'ironbridge-dock-row';
 
 export interface Content {

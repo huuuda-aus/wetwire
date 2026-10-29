@@ -1,0 +1,271 @@
+{
+  "id": "generated-24x18-51",
+  "name": "Generated Sprawl · 24×18 · Seed 51",
+  "rows": [
+    "########################",
+    "#S..########...#########",
+    "#.........##........####",
+    "#.T..D.....D........####",
+    "###.###...#######...####",
+    "###.####################",
+    "###.##...###...#...#####",
+    "##.................#####",
+    "##.......###...#...#####",
+    "##...###################",
+    "##.#####################",
+    "##.#####################",
+    "#...###...#...##...#####",
+    "#................R.#####",
+    "#...###...#...##...#####",
+    "########################",
+    "########################",
+    "########################"
+  ],
+  "wrenStart": {
+    "x": 1,
+    "y": 1
+  },
+  "terminal": {
+    "x": 2,
+    "y": 3
+  },
+  "receiver": {
+    "x": 17,
+    "y": 13
+  },
+  "doors": [
+    {
+      "id": "DR1",
+      "name": "DOOR-1",
+      "x": 5,
+      "y": 3
+    },
+    {
+      "id": "DR2",
+      "name": "DOOR-2",
+      "x": 11,
+      "y": 3
+    }
+  ],
+  "nodes": [
+    {
+      "id": "TERM",
+      "x": 2,
+      "y": 3,
+      "type": "terminal",
+      "label": "TERM",
+      "ctl": null
+    },
+    {
+      "id": "DR1",
+      "x": 5,
+      "y": 3,
+      "type": "door",
+      "label": "DOOR-1",
+      "ctl": "DR1"
+    },
+    {
+      "id": "DR2",
+      "x": 11,
+      "y": 3,
+      "type": "door",
+      "label": "DOOR-2",
+      "ctl": "DR2"
+    },
+    {
+      "id": "JX1",
+      "x": 2,
+      "y": 2,
+      "type": "junction",
+      "label": "JX-1",
+      "ctl": null
+    },
+    {
+      "id": "JX2",
+      "x": 8,
+      "y": 3,
+      "type": "junction",
+      "label": "JX-2",
+      "ctl": null
+    },
+    {
+      "id": "JX3",
+      "x": 13,
+      "y": 2,
+      "type": "junction",
+      "label": "JX-3",
+      "ctl": null
+    },
+    {
+      "id": "JX4",
+      "x": 18,
+      "y": 3,
+      "type": "junction",
+      "label": "JX-4",
+      "ctl": null
+    },
+    {
+      "id": "JX5",
+      "x": 3,
+      "y": 8,
+      "type": "junction",
+      "label": "JX-5",
+      "ctl": null
+    },
+    {
+      "id": "JX6",
+      "x": 7,
+      "y": 7,
+      "type": "junction",
+      "label": "JX-6",
+      "ctl": null
+    },
+    {
+      "id": "JX7",
+      "x": 13,
+      "y": 7,
+      "type": "junction",
+      "label": "JX-7",
+      "ctl": null
+    },
+    {
+      "id": "JX8",
+      "x": 17,
+      "y": 7,
+      "type": "junction",
+      "label": "JX-8",
+      "ctl": null
+    },
+    {
+      "id": "JX9",
+      "x": 2,
+      "y": 13,
+      "type": "junction",
+      "label": "JX-9",
+      "ctl": null
+    },
+    {
+      "id": "JX10",
+      "x": 8,
+      "y": 13,
+      "type": "junction",
+      "label": "JX-10",
+      "ctl": null
+    },
+    {
+      "id": "JX11",
+      "x": 12,
+      "y": 13,
+      "type": "junction",
+      "label": "JX-11",
+      "ctl": null
+    },
+    {
+      "id": "JX12",
+      "x": 17,
+      "y": 13,
+      "type": "junction",
+      "label": "JX-12",
+      "ctl": null
+    },
+    {
+      "id": "ICE",
+      "x": 18,
+      "y": 14,
+      "type": "ice",
+      "label": "ICE",
+      "ctl": null
+    },
+    {
+      "id": "CAMNODE1",
+      "x": 3,
+      "y": 1,
+      "type": "camera",
+      "label": "CAM-A",
+      "ctl": "CAM-A"
+    },
+    {
+      "id": "CAMNODE2",
+      "x": 14,
+      "y": 1,
+      "type": "camera",
+      "label": "CAM-B",
+      "ctl": "CAM-B"
+    },
+    {
+      "id": "CAMNODE3",
+      "x": 2,
+      "y": 7,
+      "type": "camera",
+      "label": "CAM-C",
+      "ctl": "CAM-C"
+    }
+  ],
+  "links": [
+    ["TERM", "DR1"],
+    ["DR1", "DR2"],
+    ["DR2", "JX1"],
+    ["JX1", "JX2"],
+    ["JX2", "JX3"],
+    ["JX3", "JX4"],
+    ["JX4", "JX5"],
+    ["JX5", "JX6"],
+    ["JX6", "JX7"],
+    ["JX7", "JX8"],
+    ["JX8", "JX9"],
+    ["JX9", "JX10"],
+    ["JX10", "JX11"],
+    ["JX11", "JX12"],
+    ["JX12", "ICE"],
+    ["ICE", "CAMNODE1"],
+    ["ICE", "CAMNODE2"],
+    ["ICE", "CAMNODE3"]
+  ],
+  "cams": [
+    {
+      "id": "CAM-A",
+      "node": "CAMNODE1",
+      "x": 3,
+      "y": 1,
+      "dirs": [3, 0]
+    },
+    {
+      "id": "CAM-B",
+      "node": "CAMNODE2",
+      "x": 14,
+      "y": 1,
+      "dirs": [0, 3]
+    },
+    {
+      "id": "CAM-C",
+      "node": "CAMNODE3",
+      "x": 2,
+      "y": 7,
+      "dirs": [3, 2]
+    }
+  ],
+  "hunters": [
+    {
+      "id": "H-1",
+      "x": 18,
+      "y": 6,
+      "face": 1,
+      "wps": [
+        [12, 12],
+        [5, 3]
+      ],
+      "wpi": 0
+    },
+    {
+      "id": "H-2",
+      "x": 9,
+      "y": 3,
+      "face": 0,
+      "wps": [
+        [4, 13],
+        [4, 2]
+      ],
+      "wpi": 0
+    }
+  ]
+}

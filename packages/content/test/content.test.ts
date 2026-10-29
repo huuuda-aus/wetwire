@@ -42,10 +42,12 @@ describe('content validation', () => {
     expect(() => parseContent(districts, badDefault)).toThrow(/defaultPayload/);
   });
 
-  it('loads every shipped district, with dock row as the default', () => {
-    expect(content.districts).toHaveLength(2);
+  it('loads every shipped district (hand-authored plus any saved generated candidates), with dock row as the default', () => {
     expect(content.district.id).toBe('ironbridge-dock-row');
-    expect(content.districts.map((d) => d.id).sort()).toEqual(['harrow-yards', 'ironbridge-dock-row']);
+    const ids = content.districts.map((d) => d.id);
+    expect(ids).toContain('ironbridge-dock-row');
+    expect(ids).toContain('harrow-yards');
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('rejects two districts that share an id', () => {
