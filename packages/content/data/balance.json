@@ -1,10 +1,12 @@
 {
   "overloadMax": 100,
   "maskCost": 10,
+  "sprintCost": 8,
   "wrenBody": 3,
   "kadeBody": 2,
   "cam": { "range": 6, "cos": 0.8, "turnEvery": 2 },
-  "hunter": { "sight": 4.5, "memory": 6, "stunTicks": 2, "hitDamage": 1 },
+  "hunter": { "sight": 4.5, "memory": 6, "stunTicks": 2, "hitDamage": 1, "body": 4 },
+  "razor": { "body": 5, "hitDamage": 1, "heavyHitDamage": 2 },
   "net": {
     "decay": { "load": 6, "trace": 2 },
     "costs": {
@@ -25,6 +27,7 @@
     "bodyHitShock": 4,
     "bodyHitLoadFloor": 70
   },
+  "neural": { "capacity": 100, "attenuationTicks": 3, "attenuationEvery": 2 },
   "downloadTicks": 2,
   "fee": { "base": 0.55, "perBody": 0.15, "round": 100 },
   "defaultPayload": "standard",

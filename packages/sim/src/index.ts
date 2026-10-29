@@ -2,14 +2,17 @@ export * from './types.ts';
 export {
   WREN,
   KADE,
+  RAZOR,
   legalActions,
   legalCourierActions,
   legalDeckerActions,
+  legalRazorActions,
   costOf,
   isHack,
   sameAction,
 } from './actions.ts';
 export { createMatch, resolveTick, telegraphs, viewFor, fee, buildRuleset } from './match.ts';
+export { loadoutSlotCost, validateLoadout, type LoadoutCheck } from './loadout.ts';
 export {
   DIRS,
   DIR_NAMES,

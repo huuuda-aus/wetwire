@@ -2,13 +2,17 @@ import { content } from '@wetwire/content';
 import { describe, expect, it } from 'vitest';
 import {
   KADE,
+  RAZOR,
   WREN,
   createMatch,
   distField,
   legalActions,
   legalDeckerActions,
+  legalRazorActions,
+  loadoutSlotCost,
   resolveTick,
   telegraphs,
+  validateLoadout,
   viewFor,
   fee,
   camFacing,
@@ -19,6 +23,8 @@ import {
 const fresh = (payload = 'standard'): MatchState => createMatch(content, { payload }, 1);
 const tick = (s: MatchState, wren: Action, kade: Action) =>
   resolveTick(s, { actions: { [WREN]: wren, [KADE]: kade } });
+const tickR = (s: MatchState, wren: Action, kade: Action, razor: Action) =>
+  resolveTick(s, { actions: { [WREN]: wren, [KADE]: kade, [RAZOR]: razor } });
 const route = (s: MatchState, dr1: boolean, dr2: boolean): number => {
   const copy: MatchState = { ...s, doors: { DR1: dr1, DR2: dr2 } };
   const field = distField(copy, [s.rules.district.receiver], false);
@@ -33,6 +39,21 @@ const hunter = (s: MatchState, id: string) => {
 describe('district geometry', () => {
   it('route is 25 moves with both doors locked and 17 with both open', () => {
     const s = fresh();
+    expect(route(s, false, false)).toBe(25);
+    expect(route(s, true, true)).toBe(17);
+  });
+
+  it('createMatch picks a district by id, defaulting to content.district', () => {
+    const named = createMatch(content, { payload: 'standard', districtId: 'harrow-yards' }, 1);
+    expect(named.rules.district.id).toBe('harrow-yards');
+    const unknown = createMatch(content, { payload: 'standard', districtId: 'nope' }, 1);
+    expect(unknown.rules.district.id).toBe(content.district.id);
+    const omitted = createMatch(content, { payload: 'standard' }, 1);
+    expect(omitted.rules.district.id).toBe(content.district.id);
+  });
+
+  it('harrow-yards route is 25 moves with both doors locked and 17 with both open', () => {
+    const s = createMatch(content, { payload: 'standard', districtId: 'harrow-yards' }, 1);
     expect(route(s, false, false)).toBe(25);
     expect(route(s, true, true)).toBe(17);
   });
@@ -84,6 +105,37 @@ describe('Net and Street ordering', () => {
     expect(r.state.wren.masked).toBe(true);
   });
 
+  it('sprint moves 2 tiles and costs 8 overload on top of the payload rate', () => {
+    const s = fresh();
+    s.wren.x = 5;
+    s.wren.y = 1; // row 1 is open the whole way across
+    const standard = s.rules.balance.payloads['standard'];
+    if (!standard) throw new Error('standard payload missing from content');
+    const r = tick(s, { type: 'sprint', dir: 1 }, { type: 'hold' }).state;
+    expect([r.wren.x, r.wren.y]).toEqual([7, 1]);
+    expect(r.wren.overload).toBe(content.balance.sprintCost + standard.rate);
+    expect(r.wren.masked).toBe(false); // sprinting is not masking; the two are mutually exclusive by being different actions
+  });
+
+  it('sprint stops at the first tile when the second is blocked, and still costs the full load', () => {
+    const s = fresh();
+    s.wren.x = 13;
+    s.wren.y = 1; // (14,1) open, (15,1) is the border wall
+    const standard = s.rules.balance.payloads['standard'];
+    if (!standard) throw new Error('standard payload missing from content');
+    const r = tick(s, { type: 'sprint', dir: 1 }, { type: 'hold' }).state;
+    expect([r.wren.x, r.wren.y]).toEqual([14, 1]);
+    expect(r.wren.overload).toBe(content.balance.sprintCost + standard.rate);
+  });
+
+  it('sprint into an immediately blocked tile moves nowhere', () => {
+    const s = fresh();
+    s.wren.x = 14;
+    s.wren.y = 1; // (15,1) is the border wall
+    const r = tick(s, { type: 'sprint', dir: 1 }, { type: 'hold' }).state;
+    expect([r.wren.x, r.wren.y]).toEqual([14, 1]);
+  });
+
   it('an illegal requested action falls back to wait / hold', () => {
     const r = tick(fresh(), { type: 'move', dir: 3 }, { type: 'burn', target: 'H-1' });
     expect([r.state.wren.x, r.state.wren.y]).toEqual([1, 9]);
@@ -107,6 +159,56 @@ describe('Kade meters', () => {
     const r = tick(s, { type: 'wait' }, { type: 'blind', target: 'CAMC' }).state;
     expect(r.kade.shock).toBe(3);
     expect(r.kade.load).toBe(60);
+  });
+
+  it('loadout cost sums known implants and ignores an unknown id for the pure cost function', () => {
+    expect(loadoutSlotCost(content.implants, ['razor-nails', 'mirrorshades'])).toBe(25);
+    expect(loadoutSlotCost(content.implants, ['razor-nails', 'nope'])).toBe(15);
+  });
+
+  it('validateLoadout accepts exactly at capacity and rejects one over the boundary', () => {
+    expect(validateLoadout(content.implants, 15, ['razor-nails']).ok).toBe(true); // cost 15, capacity 15
+    expect(validateLoadout(content.implants, 14, ['razor-nails']).ok).toBe(false); // cost 15, capacity 14
+    const all = content.implants.map((i) => i.id);
+    expect(validateLoadout(content.implants, content.balance.neural.capacity, all).ok).toBe(false);
+  });
+
+  it('validateLoadout rejects an implant id the content does not define', () => {
+    const check = validateLoadout(content.implants, content.balance.neural.capacity, ['not-a-real-implant']);
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/unknown implant/);
+  });
+
+  it('createMatch throws when a starting loadout costs more than the neural budget', () => {
+    const tooMuch = [
+      'mono-whip',
+      'dermal-plating',
+      'ice-pick-deck',
+      'ghost-deck',
+      'quiet-heart',
+      'mirrorshades',
+    ]; // 105
+    expect(() => createMatch(content, { payload: 'standard', kadeLoadout: tooMuch }, 1)).toThrow(
+      /neural budget/,
+    );
+  });
+
+  it('createMatch accepts a loadout within budget and carries it onto the unit', () => {
+    const s = createMatch(content, { payload: 'standard', kadeLoadout: ['razor-nails', 'mirrorshades'] }, 1);
+    expect(s.kade.loadout).toEqual(['razor-nails', 'mirrorshades']);
+  });
+
+  it('installed chrome is attack surface: a Kade with implants dumpshocks at a lower hack load (§7.2)', () => {
+    // No hack this tick, so load decays by 6 (net.decay.load) before the threshold check.
+    const bare = fresh();
+    bare.kade.load = 87;
+    const bareOut = tick(bare, { type: 'wait' }, { type: 'hold' }).state;
+    expect(bareOut.kade.shock).toBe(0); // (87 - 6) = 81, nowhere near 100
+
+    const chromed = createMatch(content, { payload: 'standard', kadeLoadout: ['mono-whip'] }, 1); // 20 slot cost
+    chromed.kade.load = 87;
+    const chromedOut = tick(chromed, { type: 'wait' }, { type: 'hold' }).state;
+    expect(chromedOut.kade.shock).toBe(3); // (87 - 6) + 20 = 101 >= 100, same hack spend as the bare case
   });
 
   it('a dumpshocked Kade can only hold', () => {
@@ -135,6 +237,37 @@ describe('Kade meters', () => {
     s = tick(s, { type: 'wait' }, { type: 'ice', target: 'ICE' }).state;
     s = tick(s, { type: 'wait' }, { type: 'ice', target: 'ICE' }).state;
     expect(s.ice).toBe(0);
+  });
+
+  it('lock is only offered for an open door, unlock only for a closed one', () => {
+    const s = fresh();
+    expect(legalDeckerActions(s)).not.toContainEqual({ type: 'lock', target: 'DR2' });
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'unlock', target: 'DR2' });
+    s.doors['DR2'] = true;
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'lock', target: 'DR2' });
+    expect(legalDeckerActions(s)).not.toContainEqual({ type: 'unlock', target: 'DR2' });
+  });
+
+  it('lock closes an open door and is free (no load or trace cost)', () => {
+    const s = fresh();
+    s.doors['DR2'] = true;
+    s.kade.load = 20;
+    s.kade.trace = 10;
+    const r = tick(s, { type: 'wait' }, { type: 'lock', target: 'DR2' }).state;
+    expect(r.doors['DR2']).toBe(false);
+    // no hack this tick, so load/trace only move by the usual decay
+    expect(r.kade.load).toBe(20 - content.balance.net.decay.load);
+    expect(r.kade.trace).toBe(10 - content.balance.net.decay.trace);
+    expect(r.stats.hacks).toBe(0); // locking is not a hack
+  });
+
+  it('a door locked the same tick Wren tries to walk through it blocks her (Net resolves first)', () => {
+    let s = fresh();
+    s.doors['DR2'] = true;
+    s.wren.x = 3;
+    s.wren.y = 8;
+    s = tick(s, { type: 'move', dir: 1 }, { type: 'lock', target: 'DR2' }).state;
+    expect([s.wren.x, s.wren.y]).toEqual([3, 8]); // bumped, same as a door that was never open
   });
 });
 
@@ -215,6 +348,200 @@ describe('hunters', () => {
     // At tick 2 every camera is mid-pose; at tick 2 -> 3 they all turn.
     const next = tick(s, { type: 'wait' }, { type: 'hold' }).state;
     expect(telegraphs(next).filter((x) => x.kind === 'cameraTurn')).toHaveLength(3);
+  });
+});
+
+describe('Razor', () => {
+  it('spawns at Wren’s start tile with the role kit’s body', () => {
+    const s = fresh();
+    expect(s.razor).toEqual({
+      x: s.wren.x,
+      y: s.wren.y,
+      body: content.balance.razor.body,
+      windup: null,
+      guarding: null,
+    });
+  });
+
+  it('strike only offers hunters that are adjacent and not already defeated', () => {
+    const s = fresh();
+    expect(legalRazorActions(s).some((a) => a.type === 'strike')).toBe(false);
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    expect(legalRazorActions(s)).toContainEqual({ type: 'strike', target: 'H-1' });
+    h.defeated = true;
+    expect(legalRazorActions(s).some((a) => a.type === 'strike' && a.target === 'H-1')).toBe(false);
+  });
+
+  it('a strike damages the target and is logged', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'strike', target: 'H-1' });
+    expect(hunter(r.state, 'H-1').body).toBe(content.balance.hunter.body - content.balance.razor.hitDamage);
+    expect(r.events.some((e) => e.type === 'RazorStruck')).toBe(true);
+  });
+
+  it('a hunter reduced to 0 body is defeated and stops acting for the rest of the match', () => {
+    let s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    h.body = content.balance.razor.hitDamage; // one strike away from 0
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'strike', target: 'H-1' });
+    s = r.state;
+    expect(hunter(s, 'H-1').defeated).toBe(true);
+    expect(r.events.some((e) => e.type === 'HunterDefeated')).toBe(true);
+    const start = { x: hunter(s, 'H-1').x, y: hunter(s, 'H-1').y };
+    s = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect({ x: hunter(s, 'H-1').x, y: hunter(s, 'H-1').y }).toEqual(start); // never moves again
+    expect(legalRazorActions(s).some((a) => a.type === 'strike')).toBe(false); // can't be struck again
+  });
+
+  it('a defeated hunter does not alert, hunt, or attack', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.defeated = true;
+    h.x = s.wren.x;
+    h.y = s.wren.y - 1; // adjacent to Wren; would normally hit her
+    h.plan = null;
+    const r = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect(r.wren.body).toBe(s.wren.body); // untouched
+  });
+
+  it('a hunter adjacent to Razor (but not Wren) hits her and is stunned, same as the Wren rule', () => {
+    const s = fresh();
+    s.wren.x = 0; // move Wren out of range so the hunter's only adjacent target is Razor
+    s.wren.y = 0;
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    const r = tick(s, { type: 'wait' }, { type: 'hold' });
+    expect(r.state.razor.body).toBe(content.balance.razor.body - content.balance.hunter.hitDamage);
+    // stepMeters decrements stun once in the same tick it's set, same as the Wren-hit case above.
+    expect(hunter(r.state, 'H-1').stun).toBe(content.balance.hunter.stunTicks - 1);
+    expect(r.events.some((e) => e.type === 'RazorHit')).toBe(true);
+  });
+
+  it('a downed Razor (body 0) can only wait, and it does not end the match', () => {
+    const s = fresh();
+    s.razor.body = 0;
+    expect(legalRazorActions(s)).toEqual([{ type: 'wait' }]);
+    const r = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect(r.status).toBe('play');
+  });
+
+  it('Razor moves like any other street unit and bumps into walls', () => {
+    const s = fresh();
+    const legal = legalRazorActions(s);
+    expect(legal.some((a) => a.type === 'wait')).toBe(true);
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'move', dir: 1 }).state;
+    expect([r.razor.x, r.razor.y]).toEqual([s.razor.x + 1, s.razor.y]);
+  });
+
+  it('heavy strike takes 2 ticks: a commit with no damage, then 2 damage on its own', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    expect(legalRazorActions(s)).toContainEqual({ type: 'heavy-strike', target: 'H-1' });
+
+    const committed = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'heavy-strike', target: 'H-1' });
+    expect(hunter(committed.state, 'H-1').body).toBe(content.balance.hunter.body); // no damage yet
+    expect(committed.events.some((e) => e.type === 'HeavyStrikeWindup')).toBe(true);
+    expect(committed.state.razor.windup).toEqual({ target: 'H-1' });
+
+    // Locked in: whatever Razor's own plan says next tick, she still only has wait available.
+    expect(legalRazorActions(committed.state)).toEqual([{ type: 'wait' }]);
+    const landed = tick(committed.state, { type: 'wait' }, { type: 'hold' });
+    expect(hunter(landed.state, 'H-1').body).toBe(
+      content.balance.hunter.body - content.balance.razor.heavyHitDamage,
+    );
+    expect(landed.events.some((e) => e.type === 'HeavyStrikeLanded')).toBe(true);
+    expect(landed.state.razor.windup).toBeNull();
+  });
+
+  it('a heavy strike fizzles with no damage if the target moves out of range first', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.razor.x + 1;
+    h.y = s.razor.y;
+    h.plan = null;
+    const state = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'heavy-strike', target: 'H-1' }).state;
+    const target = hunter(state, 'H-1');
+    target.x += 5; // well outside strike range when the swing lands
+    target.plan = null;
+    const r = tick(state, { type: 'wait' }, { type: 'hold' });
+    expect(r.events.some((e) => e.type === 'HeavyStrikeMissed')).toBe(true);
+    expect(hunter(r.state, 'H-1').body).toBe(content.balance.hunter.body); // untouched
+  });
+
+  it('guard blocks a hit on Wren this tick (hunter still stunned) and does not persist to the next', () => {
+    const s = fresh();
+    s.razor.x = s.wren.x;
+    s.razor.y = s.wren.y - 1; // adjacent to Wren
+    const h = hunter(s, 'H-1');
+    h.x = s.wren.x + 1;
+    h.y = s.wren.y;
+    h.plan = null;
+    expect(legalRazorActions(s)).toContainEqual({ type: 'guard', target: WREN });
+
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'guard', target: WREN });
+    expect(r.state.wren.body).toBe(s.wren.body); // untouched
+    expect(hunter(r.state, 'H-1').stun).toBe(content.balance.hunter.stunTicks - 1); // still stunned, see the earlier note
+    expect(r.events.some((e) => e.type === 'RazorBlocked')).toBe(true);
+    expect(r.events.some((e) => e.type === 'CourierHit')).toBe(false);
+    expect(r.state.razor.guarding).toBeNull(); // one tick only
+
+    // Without a fresh guard order, the next hit lands normally.
+    const h2 = hunter(r.state, 'H-1');
+    h2.stun = 0;
+    const r2 = tick(r.state, { type: 'wait' }, { type: 'hold' });
+    expect(r2.state.wren.body).toBe(s.wren.body - content.balance.hunter.hitDamage);
+  });
+
+  it('guard blocks only the first of two simultaneous attackers, not both', () => {
+    const s = fresh();
+    s.razor.x = s.wren.x;
+    s.razor.y = s.wren.y - 1;
+    const h1 = hunter(s, 'H-1');
+    h1.x = s.wren.x + 1;
+    h1.y = s.wren.y;
+    h1.plan = null;
+    const h2 = hunter(s, 'H-2');
+    h2.x = s.wren.x - 1;
+    h2.y = s.wren.y;
+    h2.plan = null;
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'guard', target: WREN });
+    expect(r.state.wren.body).toBe(s.wren.body - content.balance.hunter.hitDamage); // one hit got through
+    expect(r.events.filter((e) => e.type === 'RazorBlocked')).toHaveLength(1);
+    expect(r.events.filter((e) => e.type === 'CourierHit')).toHaveLength(1);
+  });
+
+  it('guard blocks a hit on Kade at the terminal the same way', () => {
+    const s = fresh();
+    const t = s.rules.district.terminal;
+    s.razor.x = t.x + 1;
+    s.razor.y = t.y;
+    const h = s.hunters.find((x) => x.id === 'H-1');
+    if (!h) throw new Error('no hunter H-1');
+    h.x = t.x;
+    h.y = t.y - 1;
+    h.plan = null;
+    h.mode = 'body';
+    expect(legalRazorActions(s)).toContainEqual({ type: 'guard', target: KADE });
+
+    const r = tickR(s, { type: 'wait' }, { type: 'hold' }, { type: 'guard', target: KADE });
+    expect(r.state.kade.body).toBe(s.kade.body);
+    expect(r.state.kade.flat).toBe(false);
+    expect(r.events.some((e) => e.type === 'RazorBlocked')).toBe(true);
+    expect(r.events.some((e) => e.type === 'KadeHit')).toBe(false);
   });
 });
 

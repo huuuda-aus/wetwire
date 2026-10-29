@@ -1,5 +1,6 @@
-import { KADE, WREN } from './actions.ts';
+import { KADE, RAZOR, WREN } from './actions.ts';
 import { camFacing } from './geometry.ts';
+import { validateLoadout } from './loadout.ts';
 import {
   planHunters,
   stepAttacks,
@@ -9,11 +10,12 @@ import {
   stepMeters,
   stepNet,
   stepNext,
+  stepRazor,
   stepSight,
   stepWren,
   type TickContext,
 } from './steps.ts';
-import type { Content } from '@wetwire/content';
+import type { Balance, Content, District, Implant } from '@wetwire/content';
 import type {
   MatchSetup,
   MatchState,
@@ -26,7 +28,7 @@ import type {
 } from './types.ts';
 import { must } from './util.ts';
 
-export function buildRuleset({ district, balance }: Content): Ruleset {
+export function buildRuleset(district: District, balance: Balance, implants: readonly Implant[]): Ruleset {
   const cols = must(district.rows[0], 'map row').length;
   const rows = district.rows.length;
   const wall = new Uint8Array(cols * rows);
@@ -41,13 +43,31 @@ export function buildRuleset({ district, balance }: Content): Ruleset {
     must(neighbours[a], 'link node').push(b);
     must(neighbours[b], 'link node').push(a);
   }
-  return { district, balance, cols, rows, wall, doorGrid, nodes, neighbours };
+  return { district, balance, implants, cols, rows, wall, doorGrid, nodes, neighbours };
+}
+
+/** Picks `setup.districtId` from `content.districts`; falls back to `content.district` if omitted or unknown. */
+function resolveDistrict(content: Content, setup: MatchSetup): District {
+  if (setup.districtId === undefined) return content.district;
+  return content.districts.find((d) => d.id === setup.districtId) ?? content.district;
+}
+
+/** Throws if a starting loadout costs more than the neural budget: see MatchSetup.wrenLoadout. */
+function checkedLoadout(content: Content, who: string, implantIds: readonly string[] | undefined): string[] {
+  const ids = implantIds ?? [];
+  const check = validateLoadout(content.implants, content.balance.neural.capacity, ids);
+  if (!check.ok)
+    throw new Error(`wetwire sim: ${who}'s loadout is illegal: ${check.reason ?? 'unknown reason'}`);
+  return [...ids];
 }
 
 export function createMatch(content: Content, setup: MatchSetup, seed: number): MatchState {
-  const rules = buildRuleset(content);
-  const { district, balance } = content;
+  const district = resolveDistrict(content, setup);
+  const { balance } = content;
+  const rules = buildRuleset(district, balance, content.implants);
   const payload = setup.payload in balance.payloads ? setup.payload : balance.defaultPayload;
+  const wrenLoadout = checkedLoadout(content, 'Wren', setup.wrenLoadout);
+  const kadeLoadout = checkedLoadout(content, 'Kade', setup.kadeLoadout);
   const s: MatchState = {
     rules,
     seed,
@@ -61,8 +81,27 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
       body: balance.wrenBody,
       overload: 0,
       masked: false,
+      loadout: wrenLoadout,
     },
-    kade: { node: 'TERM', load: 0, trace: 0, body: balance.kadeBody, shock: 0, shockNew: false, flat: false },
+    kade: {
+      node: 'TERM',
+      load: 0,
+      trace: 0,
+      body: balance.kadeBody,
+      shock: 0,
+      shockNew: false,
+      flat: false,
+      loadout: kadeLoadout,
+    },
+    // No dedicated spawn marker in district content yet (§ decisions): Razor starts at Wren's
+    // own start tile.
+    razor: {
+      x: district.wrenStart.x,
+      y: district.wrenStart.y,
+      body: balance.razor.body,
+      windup: null,
+      guarding: null,
+    },
     doors: Object.fromEntries(district.doors.map((d) => [d.id, false])),
     ice: balance.net.iceLayers,
     owned: [],
@@ -87,6 +126,8 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
         memory: 0,
         stun: 0,
         plan: null,
+        body: balance.hunter.body,
+        defeated: false,
       };
     }),
     download: 0,
@@ -102,6 +143,7 @@ function cloneState(s: MatchState): MatchState {
     ...s,
     wren: { ...s.wren },
     kade: { ...s.kade },
+    razor: { ...s.razor, windup: s.razor.windup && { ...s.razor.windup } },
     doors: { ...s.doors },
     owned: [...s.owned],
     cams: s.cams.map((c) => ({ ...c })),
@@ -120,6 +162,7 @@ export function resolveTick(prev: MatchState, input: TickInput): TickResult {
   const ctx: TickContext = { s: cloneState(prev), events: [], hacked: false };
   stepNet(ctx, input.actions[KADE]);
   stepWren(ctx, input.actions[WREN]);
+  stepRazor(ctx, input.actions[RAZOR]);
   stepHunters(ctx);
   stepCameras(ctx);
   stepSight(ctx);

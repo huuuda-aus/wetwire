@@ -1,0 +1,208 @@
+[
+  {
+    "id": "courier",
+    "name": "Courier",
+    "body": 3,
+    "baseMove": 1,
+    "canSprint": true,
+    "passive": "Chooses payload size at pickup",
+    "actions": [
+      {
+        "id": "mask",
+        "label": "Mask",
+        "channel": "ghost",
+        "effect": "Cameras ignore you; hunters only see you if adjacent, for this tick only",
+        "loadCost": 10
+      },
+      {
+        "id": "sprint",
+        "label": "Sprint",
+        "channel": null,
+        "effect": "Move 2 tiles this tick; cannot mask the same tick",
+        "loadCost": 8
+      },
+      {
+        "id": "dead-drop",
+        "label": "Dead drop",
+        "channel": null,
+        "effect": "Hand the payload to an adjacent ally",
+        "windupTicks": 1
+      }
+    ]
+  },
+  {
+    "id": "razor",
+    "name": "Razor",
+    "body": 5,
+    "baseMove": 1,
+    "canSprint": false,
+    "passive": "Sees masked units within 2 tiles",
+    "actions": [
+      {
+        "id": "strike",
+        "label": "Strike",
+        "channel": "meat",
+        "effect": "1 damage to an adjacent target"
+      },
+      {
+        "id": "heavy-strike",
+        "label": "Heavy strike",
+        "channel": "meat",
+        "effect": "2 damage to an adjacent target",
+        "windupTicks": 2
+      },
+      {
+        "id": "guard",
+        "label": "Guard",
+        "channel": "meat",
+        "effect": "Blocks the next hit on an adjacent ally"
+      }
+    ]
+  },
+  {
+    "id": "decker",
+    "name": "Decker",
+    "body": 2,
+    "baseMove": 1,
+    "canSprint": false,
+    "passive": "Body is defenceless while jacked in; damage taken while jacked in causes dumpshock 3",
+    "actions": [
+      {
+        "id": "jack-in",
+        "label": "Jack in",
+        "channel": null,
+        "effect": "Enter the Net from the body's current node",
+        "windupTicks": 1
+      },
+      {
+        "id": "jack-out",
+        "label": "Jack out",
+        "channel": null,
+        "effect": "Leave the Net and return control to the body",
+        "windupTicks": 1
+      },
+      {
+        "id": "blind",
+        "label": "Blind",
+        "channel": "net",
+        "effect": "Disables a camera node for several ticks (cost: see net.costs.blind)"
+      },
+      {
+        "id": "unlock",
+        "label": "Unlock",
+        "channel": "net",
+        "effect": "Opens a door node permanently (cost: see net.costs.unlock)"
+      },
+      {
+        "id": "lock",
+        "label": "Lock",
+        "channel": "net",
+        "effect": "Closes an open door node; a lock this tick beats an unlock this tick"
+      },
+      {
+        "id": "break-ice",
+        "label": "Break ICE",
+        "channel": "net",
+        "effect": "Removes a layer of ICE on a node (cost: see net.costs.ice)"
+      },
+      {
+        "id": "burn-implant",
+        "label": "Burn implant",
+        "channel": "net",
+        "effect": "Stuns a hunter within range of the decker's node (cost: see net.costs.burn)"
+      },
+      {
+        "id": "track-signal",
+        "label": "Track signal",
+        "channel": "net",
+        "effect": "Follows the payload's signal from a linked node"
+      },
+      {
+        "id": "plant-ice",
+        "label": "Plant ICE",
+        "channel": "net",
+        "effect": "Adds a layer of ICE to a node",
+        "windupTicks": 2
+      }
+    ]
+  },
+  {
+    "id": "hunter",
+    "name": "Hunter",
+    "body": 4,
+    "baseMove": 1,
+    "canSprint": false,
+    "passive": "Follows signal trails up to 3 ticks old",
+    "actions": [
+      {
+        "id": "strike",
+        "label": "Strike",
+        "channel": "meat",
+        "effect": "1 damage to an adjacent target"
+      },
+      {
+        "id": "trap",
+        "label": "Trap",
+        "channel": "ghost",
+        "effect": "Places a hidden tile that roots whoever steps on it for 2 ticks"
+      },
+      {
+        "id": "mark",
+        "label": "Mark",
+        "channel": "net",
+        "effect": "Reveals the target to your team for 3 ticks; needs line of sight to place"
+      }
+    ]
+  },
+  {
+    "id": "fixer",
+    "name": "Fixer",
+    "body": 3,
+    "baseMove": 1,
+    "canSprint": false,
+    "passive": "Earns credits during the match",
+    "actions": [
+      {
+        "id": "sell-route",
+        "label": "Sell route",
+        "channel": "net",
+        "effect": "Reveals one enemy to your team, costs credits"
+      },
+      {
+        "id": "bounty",
+        "label": "Bounty",
+        "channel": null,
+        "effect": "Places a credit reward on a target"
+      },
+      {
+        "id": "broker",
+        "label": "Broker",
+        "channel": null,
+        "effect": "Offers an in-match deal to any player. Disabled in AI-only play; see docs/DECISIONS.md"
+      }
+    ]
+  },
+  {
+    "id": "receiver",
+    "name": "Receiver",
+    "body": 3,
+    "baseMove": 1,
+    "canSprint": false,
+    "passive": "The match ends when this role holds a payload for 2 ticks",
+    "actions": [
+      {
+        "id": "relocate",
+        "label": "Relocate the drop point",
+        "channel": null,
+        "effect": "Moves the receiver location",
+        "windupTicks": 3
+      },
+      {
+        "id": "read-out",
+        "label": "Read out",
+        "channel": null,
+        "effect": "Downloads the payload while holding it at the drop point"
+      }
+    ]
+  }
+]

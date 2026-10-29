@@ -1,0 +1,210 @@
+{
+  "id": "generated-1",
+  "name": "Generated Sprawl · Seed 1",
+  "rows": [
+    "################",
+    "#.T....#########",
+    "#.S.D...D..#####",
+    "#.####..#..#####",
+    "#.##############",
+    "#.###.....######",
+    "#......##..#####",
+    "#..######R.#####",
+    "################",
+    "################",
+    "################"
+  ],
+  "wrenStart": {
+    "x": 2,
+    "y": 2
+  },
+  "terminal": {
+    "x": 2,
+    "y": 1
+  },
+  "receiver": {
+    "x": 9,
+    "y": 7
+  },
+  "doors": [
+    {
+      "id": "DR1",
+      "name": "DOOR-1",
+      "x": 4,
+      "y": 2
+    },
+    {
+      "id": "DR2",
+      "name": "DOOR-2",
+      "x": 8,
+      "y": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "TERM",
+      "x": 2,
+      "y": 1,
+      "type": "terminal",
+      "label": "TERM",
+      "ctl": null
+    },
+    {
+      "id": "DR1",
+      "x": 4,
+      "y": 2,
+      "type": "door",
+      "label": "DOOR-1",
+      "ctl": "DR1"
+    },
+    {
+      "id": "DR2",
+      "x": 8,
+      "y": 2,
+      "type": "door",
+      "label": "DOOR-2",
+      "ctl": "DR2"
+    },
+    {
+      "id": "JX1",
+      "x": 1,
+      "y": 1,
+      "type": "junction",
+      "label": "JX-1",
+      "ctl": null
+    },
+    {
+      "id": "JX2",
+      "x": 6,
+      "y": 2,
+      "type": "junction",
+      "label": "JX-2",
+      "ctl": null
+    },
+    {
+      "id": "JX3",
+      "x": 9,
+      "y": 2,
+      "type": "junction",
+      "label": "JX-3",
+      "ctl": null
+    },
+    {
+      "id": "JX4",
+      "x": 1,
+      "y": 6,
+      "type": "junction",
+      "label": "JX-4",
+      "ctl": null
+    },
+    {
+      "id": "JX5",
+      "x": 5,
+      "y": 5,
+      "type": "junction",
+      "label": "JX-5",
+      "ctl": null
+    },
+    {
+      "id": "JX6",
+      "x": 9,
+      "y": 6,
+      "type": "junction",
+      "label": "JX-6",
+      "ctl": null
+    },
+    {
+      "id": "ICE",
+      "x": 10,
+      "y": 6,
+      "type": "ice",
+      "label": "ICE",
+      "ctl": null
+    },
+    {
+      "id": "CAMNODE1",
+      "x": 1,
+      "y": 1,
+      "type": "camera",
+      "label": "CAM-A",
+      "ctl": "CAM-A"
+    },
+    {
+      "id": "CAMNODE2",
+      "x": 9,
+      "y": 3,
+      "type": "camera",
+      "label": "CAM-B",
+      "ctl": "CAM-B"
+    },
+    {
+      "id": "CAMNODE3",
+      "x": 6,
+      "y": 6,
+      "type": "camera",
+      "label": "CAM-C",
+      "ctl": "CAM-C"
+    }
+  ],
+  "links": [
+    ["TERM", "DR1"],
+    ["DR1", "DR2"],
+    ["DR2", "JX1"],
+    ["JX1", "JX2"],
+    ["JX2", "JX3"],
+    ["JX3", "JX4"],
+    ["JX4", "JX5"],
+    ["JX5", "JX6"],
+    ["JX6", "ICE"],
+    ["ICE", "CAMNODE1"],
+    ["ICE", "CAMNODE2"],
+    ["ICE", "CAMNODE3"]
+  ],
+  "cams": [
+    {
+      "id": "CAM-A",
+      "node": "CAMNODE1",
+      "x": 1,
+      "y": 1,
+      "dirs": [2, 1]
+    },
+    {
+      "id": "CAM-B",
+      "node": "CAMNODE2",
+      "x": 9,
+      "y": 3,
+      "dirs": [2, 1]
+    },
+    {
+      "id": "CAM-C",
+      "node": "CAMNODE3",
+      "x": 6,
+      "y": 6,
+      "dirs": [0, 2]
+    }
+  ],
+  "hunters": [
+    {
+      "id": "H-1",
+      "x": 4,
+      "y": 2,
+      "face": 1,
+      "wps": [
+        [7, 3],
+        [9, 5]
+      ],
+      "wpi": 0
+    },
+    {
+      "id": "H-2",
+      "x": 9,
+      "y": 2,
+      "face": 3,
+      "wps": [
+        [2, 7],
+        [1, 5]
+      ],
+      "wpi": 0
+    }
+  ]
+}

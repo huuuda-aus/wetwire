@@ -98,6 +98,26 @@ export function KadeCard({ game }: { game: Game }) {
   );
 }
 
+export function RazorCard({ game }: { game: Game }) {
+  const { razor, hunters } = game.state;
+  const { balance } = game.state.rules;
+  const adjacent = hunters.filter((h) => !h.defeated && Math.hypot(h.x - razor.x, h.y - razor.y) <= 1);
+  return (
+    <section class="card razor" aria-label="Razor">
+      <h2 class="disp">
+        RAZOR <small>escort</small>
+      </h2>
+      <div class="row">
+        Body <Pips n={Math.max(0, razor.body)} max={balance.razor.body} />
+      </div>
+      <div class="chips">
+        {razor.body <= 0 && <Chip cls="bad">Down</Chip>}
+        {adjacent.length > 0 && razor.body > 0 && <Chip cls="bad">In melee range</Chip>}
+      </div>
+    </section>
+  );
+}
+
 export function LogPanel({ game }: { game: Game }) {
   return (
     <section class="card">
@@ -121,6 +141,8 @@ export const Legend = () => (
     <div class="legend">
       <i style={{ background: 'var(--amber)', transform: 'rotate(45deg) scale(.7)' }} />
       <span>Wren · payload · your crew</span>
+      <i style={{ background: 'var(--razor)', transform: 'rotate(45deg) scale(.7)' }} />
+      <span>Razor · escort</span>
       <i style={{ background: 'var(--crim)', clipPath: 'polygon(0 0,100% 50%,0 100%)' }} />
       <span>Syndicate hunter</span>
       <i style={{ background: 'rgba(224,70,78,.35)' }} />

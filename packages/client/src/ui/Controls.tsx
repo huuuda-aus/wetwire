@@ -3,7 +3,8 @@ import { useEffect, useRef } from 'preact/hooks';
 import type { Sfx } from '../audio.ts';
 import type { Game } from '../game.ts';
 import type { MotionPref } from '../prefs.ts';
-import { MOVE_KEYS, courierLabel, deckerLabel } from './labels.ts';
+import { routeInfo } from '../scouting.ts';
+import { MOVE_KEYS, courierLabel, deckerLabel, razorLabel } from './labels.ts';
 
 const RING = 62.8;
 
@@ -32,18 +33,22 @@ function TickRing({ game }: { game: Game }) {
 
 export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: () => void }) {
   const muted = game.prefs.volume === 0;
+  const route = routeInfo(game.state);
   return (
     <header class="top">
       <div class="logo disp">
         WET<b>WIRE</b>
       </div>
-      <div class="district">{game.content.district.name}</div>
+      <div class="district">{game.state.rules.district.name}</div>
       <div class="tickbox">
         <TickRing game={game} />
         <span class="num disp" aria-label="Tick">
           {game.state.tick}
         </span>
         <span class="district">tick</span>
+      </div>
+      <div class={`route${route.cutOff ? ' cut' : ''}`} role="status" aria-label="Route to receiver">
+        {route.cutOff ? 'Route: cut off' : `Route: ${route.distance}`}
       </div>
       <label class="chk">
         <input
@@ -89,6 +94,9 @@ export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: 
           Net (Q)
         </button>
       </div>
+      <button class="btn" aria-pressed={game.overview} onClick={() => game.setOverview(!game.overview)}>
+        Overview (V)
+      </button>
       <button class="btn" onClick={onBrief}>
         Brief
       </button>
@@ -107,6 +115,10 @@ export function PlanBar({ game }: { game: Game }) {
       <div class="slot k">
         <small>Kade · this tick</small>
         <b>{state.kade.flat ? 'Flatlined' : deckerLabel(state, plan.kade)}</b>
+      </div>
+      <div class="slot r">
+        <small>Razor · this tick</small>
+        <b>{state.razor.body <= 0 ? 'Down' : razorLabel(plan.razor)}</b>
       </div>
       <button
         class="run disp"
@@ -152,8 +164,21 @@ export function Actions({ game }: { game: Game }) {
   return (
     <div class="actions">
       {game.legalWren.map((a, i) => (
-        <button key={i} class={sameAction(a, plan.wren) ? 'sel' : ''} onClick={() => game.setWrenAction(a)}>
-          <kbd>{a.type === 'move' ? MOVE_KEYS[a.dir] : a.type === 'mask' ? 'M' : 'X'}</kbd>
+        <button
+          key={i}
+          class={sameAction(a, plan.wren) ? 'sel' : ''}
+          data-action-type={a.type}
+          onClick={() => game.setWrenAction(a)}
+        >
+          <kbd>
+            {a.type === 'move'
+              ? MOVE_KEYS[a.dir]
+              : a.type === 'sprint'
+                ? `⇧${MOVE_KEYS[a.dir]}`
+                : a.type === 'mask'
+                  ? 'M'
+                  : 'X'}
+          </kbd>
           {courierLabel(a)}
         </button>
       ))}
@@ -173,6 +198,22 @@ export function Dpad({ game }: { game: Game }) {
       {btn('w', 3, '◀', 'Move west')}
       {btn('s', 2, '▼', 'Move south')}
       {btn('e', 1, '▶', 'Move east')}
+    </div>
+  );
+}
+
+/** Razor's own small action row: always visible (she shares the Street layer with Wren but has
+ * no view of her own), buttons only — no dedicated keymap yet, that's follow-up work. */
+export function RazorActions({ game }: { game: Game }) {
+  const { plan } = game;
+  if (game.state.razor.body <= 0) return null;
+  return (
+    <div class="actions razoracts" aria-label="Razor's actions">
+      {game.legalRazor.map((a, i) => (
+        <button key={i} class={sameAction(a, plan.razor) ? 'sel' : ''} onClick={() => game.setRazorAction(a)}>
+          {razorLabel(a)}
+        </button>
+      ))}
     </div>
   );
 }

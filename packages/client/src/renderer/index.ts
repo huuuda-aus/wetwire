@@ -5,6 +5,7 @@ import type { Sfx } from '../audio.ts';
 import type { Game } from '../game.ts';
 import { reducedMotion } from '../prefs.ts';
 import { COLORS, TILE } from './draw.ts';
+import { Minimap } from './minimap.ts';
 import { NetLayer } from './net.ts';
 import { StreetLayer } from './street.ts';
 
@@ -17,6 +18,7 @@ export class Renderer {
   private readonly app: Application;
   private readonly street: StreetLayer;
   private readonly net: NetLayer;
+  private readonly minimap: Minimap;
   private readonly cutLine = new Graphics();
   private readonly mask = new Graphics();
   private readonly pip = new Container();
@@ -46,6 +48,7 @@ export class Renderer {
     const reduce = (): boolean => reducedMotion(game.prefs);
     this.street = new StreetLayer(game, this.width, this.height, reduce, this.makeRainTexture());
     this.net = new NetLayer(game, this.width, this.height, reduce);
+    this.minimap = new Minimap(this.width, this.height, this.width, this.height);
     this.net.root.mask = this.mask;
     this.net.root.visible = false;
     this.cutLine.filters = [
@@ -53,7 +56,15 @@ export class Renderer {
     ];
     this.pipRT = RenderTexture.create({ width: this.width, height: this.height, resolution: 1 });
     this.buildPip();
-    app.stage.addChild(this.street.root, this.net.root, this.mask, this.cutLine, this.pip);
+    app.stage.addChild(
+      this.street.root,
+      this.net.root,
+      this.mask,
+      this.cutLine,
+      this.pip,
+      this.minimap.buildBackdrop(),
+      this.minimap.root,
+    );
     this.unsubscribe = game.onEvents((events) => {
       const now = performance.now();
       for (const e of events) {
@@ -147,6 +158,8 @@ export class Renderer {
       this.lastVersion = g.version;
       this.street.rebuild(now);
       this.net.rebuild();
+      this.minimap.setExpanded(g.overview);
+      this.minimap.update(g.state, g.version);
     }
     if (this.wipe !== before) this.applyWipe();
     this.street.update(now);

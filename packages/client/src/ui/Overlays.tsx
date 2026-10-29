@@ -1,21 +1,48 @@
 import { fee } from '@wetwire/sim';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Game } from '../game.ts';
+import { isFirstTimer } from '../progress.ts';
 
 export function StartOverlay({
   game,
   open,
+  canResume,
   onStart,
+  onResume,
 }: {
   game: Game;
   open: boolean;
-  onStart: (payload: string) => void;
+  /** True when there's an in-progress match to go back to, so the brief acts as a pause menu
+   * rather than a dead end that forces a restart. */
+  canResume: boolean;
+  onStart: (payload: string, districtId: string) => void;
+  onResume: () => void;
 }) {
-  const [payload, setPayload] = useState(game.prefs.payload);
+  const firstTimer = isFirstTimer(game.progress);
+  const [payload, setPayload] = useState(
+    firstTimer ? game.content.balance.defaultPayload : game.prefs.payload,
+  );
+  const [districtId, setDistrictId] = useState(
+    firstTimer ? game.content.district.id : game.state.rules.district.id,
+  );
+  const payloadEntries = firstTimer
+    ? Object.entries(game.content.balance.payloads).filter(
+        ([key]) => key === game.content.balance.defaultPayload,
+      )
+    : Object.entries(game.content.balance.payloads);
+  const districts = firstTimer ? [game.content.district] : game.content.districts;
   const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (open) btn.current?.focus();
   }, [open]);
+  useEffect(() => {
+    if (!open || !canResume) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onResume();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, canResume, onResume]);
   return (
     <div
       class={open ? 'ov show' : 'ov'}
@@ -38,8 +65,14 @@ export function StartOverlay({
           You run two people at once: Wren on the Street and Kade, a decker, in the Net. Plan both moves, then
           run the tick. Everything resolves at the same moment, and hunters telegraph the step they will take.
         </p>
+        {firstTimer && (
+          <p class="dim">
+            First contract: standard load, Dock Row. More payload sizes and districts unlock after your first
+            delivery.
+          </p>
+        )}
         <fieldset class="loads" aria-label="Payload size">
-          {Object.entries(game.content.balance.payloads).map(([key, p]) => (
+          {payloadEntries.map(([key, p]) => (
             <label key={key}>
               <input
                 type="radio"
@@ -65,11 +98,29 @@ export function StartOverlay({
             </label>
           ))}
         </fieldset>
+        <fieldset class="loads" aria-label="District">
+          {districts.map((d) => (
+            <label key={d.id}>
+              <input
+                type="radio"
+                name="district"
+                value={d.id}
+                checked={districtId === d.id}
+                onChange={() => setDistrictId(d.id)}
+              />
+              <span class="nm disp">{d.name.split('·').pop()?.trim() ?? d.name}</span>
+              <span class="nt">{d.name}</span>
+            </label>
+          ))}
+        </fieldset>
         <div class="howto">
           <div>
             <h4>Street</h4>
-            <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows move Wren · <kbd>X</kbd> wait ·{' '}
-            <kbd>M</kbd> mask (+10 overload, cameras ignore you, hunters see you only if adjacent).
+            <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows move Wren · <kbd>Shift</kbd>+move
+            sprints 2 tiles (+8 overload) · <kbd>X</kbd> wait · <kbd>M</kbd> mask (+10 overload, cameras
+            ignore you, hunters see you only if adjacent).
+            <br />
+            Razor and her Strike / Heavy strike / Guard actions are buttons below the map.
             <br />
             Red dashed arrows are promises: hunters take exactly that step.
           </div>
@@ -81,9 +132,24 @@ export function StartOverlay({
             <kbd>Space</kbd> / <kbd>Enter</kbd> runs the tick.
           </div>
         </div>
-        <button class="go disp" ref={btn} onClick={() => onStart(payload)}>
-          START RUN
-        </button>
+        <div class="startRow">
+          {canResume && (
+            <button class="btn" onClick={onResume}>
+              RESUME · ESC
+            </button>
+          )}
+          <button
+            class="go disp"
+            ref={btn}
+            onClick={() => {
+              if (canResume && !confirm('Start a new run? Your current contract in progress will be lost.'))
+                return;
+              onStart(payload, districtId);
+            }}
+          >
+            {canResume ? 'RESTART RUN' : 'START RUN'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -140,7 +206,17 @@ export function EndOverlay({ game, onAgain }: { game: Game; onAgain: () => void 
           {tile('Camera alerts', state.stats.alerts)}
           {tile('Hacks', state.stats.hacks)}
         </div>
-        <button class="go disp" ref={btn} onClick={onAgain}>
+        <button
+          class="go disp"
+          ref={btn}
+          onClick={() => {
+            // This overlay stays "open" until a new match actually starts (game.state.status
+            // is still 'over' right now), so it must close itself or it sits on top of the
+            // start screen onAgain is about to reveal.
+            setOpen(false);
+            onAgain();
+          }}
+        >
           RUN IT AGAIN
         </button>
       </div>

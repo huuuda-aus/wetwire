@@ -252,6 +252,8 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
     "download": 2,
     "hunters": [
       {
+        "body": 4,
+        "defeated": false,
         "fx": 0,
         "fy": 1,
         "id": "H-1",
@@ -278,6 +280,8 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
         "y": 5,
       },
       {
+        "body": 4,
+        "defeated": false,
         "fx": 0,
         "fy": 1,
         "id": "H-2",
@@ -317,6 +321,7 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
       "body": 2,
       "flat": false,
       "load": 48,
+      "loadout": [],
       "node": "ICE",
       "shock": 1,
       "shockNew": false,
@@ -330,6 +335,13 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
       "DR1",
     ],
     "payload": "standard",
+    "razor": {
+      "body": 5,
+      "guarding": null,
+      "windup": null,
+      "x": 1,
+      "y": 9,
+    },
     "rules": undefined,
     "seed": 1,
     "stats": {
@@ -340,6 +352,7 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
     "tick": 18,
     "wren": {
       "body": 3,
+      "loadout": [],
       "masked": false,
       "overload": 54,
       "x": 13,
