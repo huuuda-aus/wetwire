@@ -76,6 +76,16 @@ button {
   min-width: 2ch;
   text-align: right;
 }
+.route {
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.route.cut {
+  color: var(--crim);
+}
 .ring {
   width: 26px;
   height: 26px;

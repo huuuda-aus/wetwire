@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import type { Sfx } from '../audio.ts';
 import type { Game } from '../game.ts';
 import type { MotionPref } from '../prefs.ts';
+import { routeInfo } from '../scouting.ts';
 import { MOVE_KEYS, courierLabel, deckerLabel, razorLabel } from './labels.ts';
 
 const RING = 62.8;
@@ -32,6 +33,7 @@ function TickRing({ game }: { game: Game }) {
 
 export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: () => void }) {
   const muted = game.prefs.volume === 0;
+  const route = routeInfo(game.state);
   return (
     <header class="top">
       <div class="logo disp">
@@ -44,6 +46,9 @@ export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: 
           {game.state.tick}
         </span>
         <span class="district">tick</span>
+      </div>
+      <div class={`route${route.cutOff ? ' cut' : ''}`} role="status" aria-label="Route to receiver">
+        {route.cutOff ? 'Route: cut off' : `Route: ${route.distance}`}
       </div>
       <label class="chk">
         <input
@@ -89,6 +94,9 @@ export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: 
           Net (Q)
         </button>
       </div>
+      <button class="btn" aria-pressed={game.overview} onClick={() => game.setOverview(!game.overview)}>
+        Overview (V)
+      </button>
       <button class="btn" onClick={onBrief}>
         Brief
       </button>
