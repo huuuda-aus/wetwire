@@ -17,6 +17,7 @@ import {
 } from '@wetwire/sim';
 import { clearMatch, loadMatch, restoreState, saveMatch } from './persist.ts';
 import { loadPrefs, savePrefs, type Prefs } from './prefs.ts';
+import { loadProgress, recordDelivery, type Progress } from './progress.ts';
 
 export type View = 'street' | 'net';
 export interface Plan {
@@ -40,6 +41,7 @@ const freshPlan = (): Plan => ({ wren: { type: 'wait' }, kade: { type: 'hold' },
 export class Game {
   readonly content: Content;
   prefs: Prefs;
+  progress: Progress;
   state: MatchState;
   plan: Plan = freshPlan();
   view: View = 'street';
@@ -61,6 +63,7 @@ export class Game {
   constructor(content: Content = shipped, prefs: Prefs = loadPrefs()) {
     this.content = content;
     this.prefs = prefs;
+    this.progress = loadProgress();
     const saved = loadMatch(content);
     if (saved) {
       this.state = restoreState(content, saved);
@@ -188,8 +191,10 @@ export class Game {
     this.tickStart = now;
     this.refresh();
     for (const fn of this.eventListeners) fn(result.events);
-    if (this.state.status === 'over') clearMatch();
-    else this.persist();
+    if (this.state.status === 'over') {
+      clearMatch();
+      if (this.state.outcome === 'delivered') this.progress = recordDelivery(this.progress);
+    } else this.persist();
   }
 
   /** Saves just enough to resume after a reload: the match state, the in-progress plan, the

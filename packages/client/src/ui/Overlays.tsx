@@ -1,6 +1,7 @@
 import { fee } from '@wetwire/sim';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Game } from '../game.ts';
+import { isFirstTimer } from '../progress.ts';
 
 export function StartOverlay({
   game,
@@ -17,8 +18,19 @@ export function StartOverlay({
   onStart: (payload: string, districtId: string) => void;
   onResume: () => void;
 }) {
-  const [payload, setPayload] = useState(game.prefs.payload);
-  const [districtId, setDistrictId] = useState(game.state.rules.district.id);
+  const firstTimer = isFirstTimer(game.progress);
+  const [payload, setPayload] = useState(
+    firstTimer ? game.content.balance.defaultPayload : game.prefs.payload,
+  );
+  const [districtId, setDistrictId] = useState(
+    firstTimer ? game.content.district.id : game.state.rules.district.id,
+  );
+  const payloadEntries = firstTimer
+    ? Object.entries(game.content.balance.payloads).filter(
+        ([key]) => key === game.content.balance.defaultPayload,
+      )
+    : Object.entries(game.content.balance.payloads);
+  const districts = firstTimer ? [game.content.district] : game.content.districts;
   const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (open) btn.current?.focus();
@@ -53,8 +65,14 @@ export function StartOverlay({
           You run two people at once: Wren on the Street and Kade, a decker, in the Net. Plan both moves, then
           run the tick. Everything resolves at the same moment, and hunters telegraph the step they will take.
         </p>
+        {firstTimer && (
+          <p class="dim">
+            First contract: standard load, Dock Row. More payload sizes and districts unlock after your first
+            delivery.
+          </p>
+        )}
         <fieldset class="loads" aria-label="Payload size">
-          {Object.entries(game.content.balance.payloads).map(([key, p]) => (
+          {payloadEntries.map(([key, p]) => (
             <label key={key}>
               <input
                 type="radio"
@@ -81,7 +99,7 @@ export function StartOverlay({
           ))}
         </fieldset>
         <fieldset class="loads" aria-label="District">
-          {game.content.districts.map((d) => (
+          {districts.map((d) => (
             <label key={d.id}>
               <input
                 type="radio"
