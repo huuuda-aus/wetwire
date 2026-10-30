@@ -355,6 +355,7 @@ exports[`golden replay (PROMPT.md §5.4) > replays identically from the same see
       "loadout": [],
       "masked": false,
       "overload": 54,
+      "windup": null,
       "x": 13,
       "y": 4,
     },

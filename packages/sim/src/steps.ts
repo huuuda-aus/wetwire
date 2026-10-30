@@ -14,9 +14,11 @@ import {
   distAt,
   distField,
   dirVec,
+  euclid,
   hunterSees,
   inCone,
   manhattan,
+  nearestOpenTile,
   passable,
   stepToward,
 } from './geometry.ts';
@@ -30,6 +32,7 @@ import type {
   HunterState,
   Layer,
   MatchState,
+  Pos,
 } from './types.ts';
 import { must } from './util.ts';
 
@@ -94,9 +97,35 @@ function applyHack(ctx: TickContext, a: HackAction): void {
       s.ice > 0 ? 'Kade strips an ICE layer' : 'Kade breaks the ICE',
       fx,
     );
-  } else {
+  } else if (a.type === 'burn') {
     must(hunter, 'burn target').stun = net.burnStun;
     emit(ctx, 'HackApplied', 'NET', 'good', `Kade burns ${a.target}'s implants`, fx);
+  } else {
+    own(s, a.target);
+    const node = must(s.rules.nodes[a.target], 'distract target');
+    // Net nodes aren't necessarily on open floor (a camera or junction can be wall-mounted);
+    // the decoy a hunter actually walks to has to be a tile it can stand on.
+    const decoy = nearestOpenTile(s, node);
+    let pulled = 0;
+    for (const h of s.hunters) {
+      // Only pulls hunters who aren't already onto something real — a fake alarm doesn't
+      // out-compete an actual sighting, and it never re-triggers a hunter it already pulled.
+      if (h.defeated || h.mode !== 'patrol') continue;
+      if (euclid(h, node) > net.distractRange) continue;
+      alertAt(h, decoy, net.distractTicks);
+      emit(ctx, 'HunterDistracted', 'STREET', 'good', `${h.id} breaks off to check the alarm`);
+      pulled += 1;
+    }
+    emit(
+      ctx,
+      'HackApplied',
+      'NET',
+      'good',
+      pulled > 0
+        ? `Kade triggers a decoy alarm at ${nodeLabel(s, a.target)}`
+        : `Kade triggers a decoy alarm at ${nodeLabel(s, a.target)}, but no one's close enough to notice`,
+      fx,
+    );
   }
 }
 
@@ -121,8 +150,33 @@ export function stepNet(ctx: TickContext, requested: Action | undefined): void {
 export function stepWren(ctx: TickContext, requested: Action | undefined): void {
   const { s } = ctx;
   const w = s.wren;
-  const a = legalCourierActions(s).find((l) => sameAction(l, requested)) ?? { type: 'wait' as const };
   w.masked = false;
+
+  // A committed takedown resolves on its own, ignoring whatever was requested this tick — same
+  // pattern as Razor's heavy strike. Fizzles with no effect if the target left range or went
+  // down in the meantime; if it's still there but no longer unaware, Wren's cover is blown.
+  if (w.windup) {
+    const target = w.windup.target;
+    w.windup = null;
+    const h = s.hunters.find((x) => x.id === target);
+    if (h && !h.defeated && manhattan(h, w) <= 1 && h.mode !== 'hunt') {
+      emit(ctx, 'TakedownLanded', 'STREET', 'good', `Wren disables ${h.id}`, {
+        kind: 'hit',
+        x: h.x,
+        y: h.y,
+        cam: null,
+      });
+      defeatHunter(ctx, h);
+    } else if (h && !h.defeated && manhattan(h, w) <= 1) {
+      emit(ctx, 'TakedownMissed', 'STREET', 'bad', `Wren's takedown on ${h.id} is blown — she's spotted`);
+      alert(s, h);
+    } else {
+      emit(ctx, 'TakedownMissed', 'STREET', 'info', "Wren's takedown finds nothing there");
+    }
+    return;
+  }
+
+  const a = legalCourierActions(s).find((l) => sameAction(l, requested)) ?? { type: 'wait' as const };
   if (a.type === 'mask') {
     w.masked = true;
     w.overload += s.rules.balance.maskCost;
@@ -160,6 +214,18 @@ export function stepWren(ctx: TickContext, requested: Action | undefined): void 
           ? 'Wren sprints 1 tile, blocked'
           : 'Wren sprints into a wall',
     );
+  } else if (a.type === 'takedown') {
+    w.windup = { target: a.target };
+    const h = must(
+      s.hunters.find((x) => x.id === a.target),
+      'takedown target',
+    );
+    emit(ctx, 'TakedownWindup', 'STREET', 'info', `Wren moves in to disable ${h.id}`, {
+      kind: 'hit',
+      x: h.x,
+      y: h.y,
+      cam: null,
+    });
   }
 }
 
@@ -249,11 +315,15 @@ export function stepHunters(ctx: TickContext): void {
   }
 }
 
-const alert = (s: MatchState, h: HunterState): void => {
+/** Sends a hunter to investigate a point for `memory` ticks — the same "lose the trail" countdown
+ * in stepSight ends it either way, whether that point is Wren's real position or a decoy. */
+const alertAt = (h: HunterState, pos: Pos, memory: number): void => {
   h.mode = 'hunt';
-  h.target = { x: s.wren.x, y: s.wren.y };
-  h.memory = s.rules.balance.hunter.memory;
+  h.target = pos;
+  h.memory = memory;
 };
+const alert = (s: MatchState, h: HunterState): void =>
+  alertAt(h, { x: s.wren.x, y: s.wren.y }, s.rules.balance.hunter.memory);
 
 /** Step 4. */
 export function stepCameras(ctx: TickContext): void {
@@ -276,6 +346,10 @@ export function stepSight(ctx: TickContext): void {
   const { s } = ctx;
   for (const h of s.hunters) {
     if (h.defeated || h.stun > 0 || h.mode === 'body') continue;
+    // The one hunter Wren is mid-takedown on is suppressed for the two ticks it takes: getting
+    // adjacent to commit would otherwise trip hunterSees' own adjacency rule and flip it to
+    // 'hunt' before the windup even resolves, making every takedown fail by construction.
+    if (s.wren.windup?.target === h.id) continue;
     if (hunterSees(s, h)) {
       if (h.mode !== 'hunt') emit(ctx, 'HunterSpotted', 'STREET', 'bad', `${h.id} spots Wren`);
       alert(s, h);
@@ -345,6 +419,9 @@ export function stepAttacks(ctx: TickContext): void {
   const { hunter } = s.rules.balance;
   for (const h of s.hunters) {
     if (h.defeated || h.stun > 0) continue;
+    // Same suppression as stepSight: the hunter Wren is mid-takedown on doesn't get a free
+    // reflexive swing at her for the approach itself.
+    if (s.wren.windup?.target === h.id) continue;
     if (manhattan(h, s.wren) <= 1) {
       h.stun = hunter.stunTicks;
       if (s.razor.guarding === 'wren') {

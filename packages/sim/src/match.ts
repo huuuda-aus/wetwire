@@ -82,6 +82,7 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
       overload: 0,
       masked: false,
       loadout: wrenLoadout,
+      windup: null,
     },
     kade: {
       node: 'TERM',
@@ -141,7 +142,7 @@ export function createMatch(content: Content, setup: MatchSetup, seed: number): 
 function cloneState(s: MatchState): MatchState {
   return {
     ...s,
-    wren: { ...s.wren },
+    wren: { ...s.wren, windup: s.wren.windup && { ...s.wren.windup } },
     kade: { ...s.kade },
     razor: { ...s.razor, windup: s.razor.windup && { ...s.razor.windup } },
     doors: { ...s.doors },

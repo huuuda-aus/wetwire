@@ -30,6 +30,12 @@ export interface WrenState extends Pos {
   /** Equipped implant ids (§7.4). Permanent slot cost; validated against neural capacity at
    * match creation, never changes mid-match. */
   loadout: readonly string[];
+  /** Takedown's 2-tick wind-up, same shape and rule as Razor's heavy strike (§7.3 commitment
+   * signals): set when committed, resolved and cleared the next tick. While set, Wren can only
+   * wait — she's committed to closing the distance and going for it. Fails with no effect if the
+   * target left range, got defeated, or noticed her in the meantime; failing alerts it instead
+   * (her cover's blown), unless it's gone entirely. */
+  windup: { target: string } | null;
 }
 export interface KadeState {
   node: string;
@@ -98,12 +104,17 @@ export interface MatchState {
 }
 
 export type CourierAction =
-  { type: 'move'; dir: Dir } | { type: 'wait' } | { type: 'mask' } | { type: 'sprint'; dir: Dir };
+  | { type: 'move'; dir: Dir }
+  | { type: 'wait' }
+  | { type: 'mask' }
+  | { type: 'sprint'; dir: Dir }
+  | { type: 'takedown'; target: string };
 export type HackAction =
   | { type: 'blind'; target: string }
   | { type: 'unlock'; target: string }
   | { type: 'ice'; target: string }
-  | { type: 'burn'; target: string };
+  | { type: 'burn'; target: string }
+  | { type: 'distract'; target: string };
 // Lock has no net.costs entry (§7.3 states a cost for Blind/Unlock/Break ICE/Burn implant but
 // not for Lock) -- free, same bucket as Hold and Route, not a HackAction.
 export type DeckerAction =
@@ -155,7 +166,11 @@ export type GameEventType =
   | 'HeavyStrikeMissed'
   | 'RazorGuarded'
   | 'RazorBlocked'
-  | 'DoorLocked';
+  | 'DoorLocked'
+  | 'TakedownWindup'
+  | 'TakedownLanded'
+  | 'TakedownMissed'
+  | 'HunterDistracted';
 export interface Fx {
   kind: 'hit' | 'spot' | 'bump' | 'hack';
   x: number;

@@ -117,6 +117,21 @@ export function hunterSees(s: MatchState, h: HunterState): boolean {
   return !w.masked && euclid(h, w) <= s.rules.balance.hunter.sight && lineOfSight(s, h, w);
 }
 
+/** Open tiles orthogonally next to `p` — for a goal that isn't guaranteed to be passable itself
+ * (a Net node can be wall-mounted, same as a camera or junction; see nearestOpenTile below). */
+export function openTilesNear(s: MatchState, p: Pos): Pos[] {
+  return DIRS.map(([dx, dy]) => ({ x: p.x + dx, y: p.y + dy })).filter((q) => passable(s, q.x, q.y));
+}
+
+/** `p` itself if it's walkable, otherwise the first open tile next to it (deterministic DIRS
+ * order), falling back to `p` unchanged if nothing nearby is open either — a BFS goal that is
+ * never itself reachable but is still the closest the hunter can get. Node positions (cameras,
+ * junctions, ICE, doors) aren't guaranteed to sit on open floor; Wren's own position always is. */
+export function nearestOpenTile(s: MatchState, p: Pos): Pos {
+  if (passable(s, p.x, p.y)) return p;
+  return openTilesNear(s, p)[0] ?? p;
+}
+
 /** Open tiles next to Kade's terminal where a hunter can reach his body. */
 export function bodyApproachTiles(s: MatchState): Pos[] {
   const t = s.rules.district.terminal;

@@ -7,6 +7,7 @@ import {
   createMatch,
   distField,
   legalActions,
+  legalCourierActions,
   legalDeckerActions,
   legalRazorActions,
   loadoutSlotCost,
@@ -542,6 +543,140 @@ describe('Razor', () => {
     expect(r.state.kade.flat).toBe(false);
     expect(r.events.some((e) => e.type === 'RazorBlocked')).toBe(true);
     expect(r.events.some((e) => e.type === 'KadeHit')).toBe(false);
+  });
+});
+
+describe('takedown', () => {
+  it('is offered only on an adjacent hunter that is not in hunt mode', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.wren.x + 1;
+    h.y = s.wren.y;
+    expect(legalCourierActions(s)).toContainEqual({ type: 'takedown', target: 'H-1' });
+    h.mode = 'hunt';
+    expect(legalCourierActions(s).some((a) => a.type === 'takedown')).toBe(false);
+  });
+
+  it('takes 2 ticks: a commit with no effect, then the hunter is disabled on its own', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.wren.x + 1;
+    h.y = s.wren.y;
+    h.plan = null; // keeps it from wandering off between the commit and the resolve
+
+    const committed = tick(s, { type: 'takedown', target: 'H-1' }, { type: 'hold' });
+    expect(hunter(committed.state, 'H-1').defeated).toBe(false);
+    expect(committed.events.some((e) => e.type === 'TakedownWindup')).toBe(true);
+    expect(committed.state.wren.windup).toEqual({ target: 'H-1' });
+
+    // Locked in: whatever Wren's own plan says next tick, she still only has wait available.
+    expect(legalCourierActions(committed.state)).toEqual([{ type: 'wait' }]);
+    const landed = tick(committed.state, { type: 'wait' }, { type: 'hold' });
+    expect(hunter(landed.state, 'H-1').defeated).toBe(true);
+    expect(landed.events.some((e) => e.type === 'TakedownLanded')).toBe(true);
+    expect(landed.state.wren.windup).toBeNull();
+  });
+
+  it('fails and alerts the hunter for real if it stops being unaware before the takedown resolves', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.wren.x + 1;
+    h.y = s.wren.y;
+    h.plan = null;
+    const committed = tick(s, { type: 'takedown', target: 'H-1' }, { type: 'hold' }).state;
+    const target = hunter(committed, 'H-1');
+    target.mode = 'hunt'; // noticed her some other way right before the takedown lands
+    target.plan = null;
+
+    const r = tick(committed, { type: 'wait' }, { type: 'hold' });
+    expect(r.events.some((e) => e.type === 'TakedownMissed')).toBe(true);
+    expect(hunter(r.state, 'H-1').defeated).toBe(false);
+    expect(hunter(r.state, 'H-1').target).toEqual({ x: s.wren.x, y: s.wren.y });
+  });
+
+  it('fizzles quietly with no alert if the target leaves range before it resolves', () => {
+    const s = fresh();
+    const h = hunter(s, 'H-1');
+    h.x = s.wren.x + 1;
+    h.y = s.wren.y;
+    h.plan = null;
+    const committed = tick(s, { type: 'takedown', target: 'H-1' }, { type: 'hold' }).state;
+    const target = hunter(committed, 'H-1');
+    target.x += 5;
+    target.plan = null;
+
+    const r = tick(committed, { type: 'wait' }, { type: 'hold' });
+    expect(r.events.some((e) => e.type === 'TakedownMissed')).toBe(true);
+    expect(hunter(r.state, 'H-1').mode).toBe('patrol'); // never alerted — it was never there to notice
+  });
+});
+
+describe('distract', () => {
+  it('is offered on every node Kade can reach, not just cameras or doors', () => {
+    const s = fresh();
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'distract', target: 'TERM' });
+    expect(legalDeckerActions(s)).toContainEqual({ type: 'distract', target: 'JX1' });
+  });
+
+  it('pulls a patrol-mode hunter in range into hunt mode and costs load/trace', () => {
+    const s = fresh();
+    s.kade.node = 'JX2';
+    const h = hunter(s, 'H-1');
+    expect(h.mode).toBe('patrol');
+    h.plan = null; // keeps it from coincidentally walking onto the decoy this same tick
+
+    const r = tick(s, { type: 'wait' }, { type: 'distract', target: 'JX2' });
+    expect(r.events.some((e) => e.type === 'HunterDistracted')).toBe(true);
+    const after = hunter(r.state, 'H-1');
+    expect(after.mode).toBe('hunt');
+    // distractTicks minus one: stepSight's ordinary per-tick decay already ran once this same tick.
+    expect(after.memory).toBe(content.balance.net.distractTicks - 1);
+    expect(r.state.kade.load).toBe(content.balance.net.costs.distract.load);
+    expect(r.state.kade.trace).toBe(content.balance.net.costs.distract.trace);
+  });
+
+  it('does not re-target a hunter already in hunt mode — a fake alarm never beats a real one', () => {
+    const s = fresh();
+    s.kade.node = 'JX2';
+    const h = hunter(s, 'H-1');
+    h.mode = 'hunt';
+    h.target = { x: 1, y: 1 };
+    h.memory = 99;
+
+    const r = tick(s, { type: 'wait' }, { type: 'distract', target: 'JX2' });
+    const after = hunter(r.state, 'H-1');
+    expect(after.target).toEqual({ x: 1, y: 1 }); // untouched by distract
+    expect(after.memory).toBe(98); // still just the ordinary per-tick decay, not reset to distractTicks
+  });
+
+  it('the decoy is a tile the hunter can actually reach, even when the node itself is wall-mounted', () => {
+    let s = fresh();
+    s.kade.node = 'JX2';
+    const jx2 = s.rules.nodes['JX2'];
+    if (!jx2) throw new Error('no JX2');
+    // Guards the premise this test exists to catch: JX2 sits on a wall tile, same as a camera
+    // can. distract used to hand that raw coordinate straight to the hunter as a BFS goal, which
+    // treats any goal as reachable regardless of its own passability — so the hunter would plan
+    // a step onto a wall and then never actually take it (stepHunters refuses impassable plans).
+    expect(s.rules.wall[jx2.y * s.rules.cols + jx2.x]).toBe(1);
+
+    s = tick(s, { type: 'wait' }, { type: 'distract', target: 'JX2' }).state;
+    const planned = hunter(s, 'H-1').plan;
+    if (!planned) throw new Error('hunter has no plan');
+    s = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    expect([hunter(s, 'H-1').x, hunter(s, 'H-1').y]).toEqual([planned.x, planned.y]);
+  });
+
+  it('a distracted hunter loses the trail after distractTicks and returns to patrol', () => {
+    let s = fresh();
+    s.kade.node = 'JX2';
+    hunter(s, 'H-1').plan = null; // keeps it from coincidentally walking onto the decoy this same tick
+    s = tick(s, { type: 'wait' }, { type: 'distract', target: 'JX2' }).state;
+    expect(hunter(s, 'H-1').mode).toBe('hunt');
+    for (let i = 0; i < content.balance.net.distractTicks; i++) {
+      s = tick(s, { type: 'wait' }, { type: 'hold' }).state;
+    }
+    expect(hunter(s, 'H-1').mode).toBe('patrol');
   });
 });
 
