@@ -48,7 +48,14 @@ export function App() {
           <RazorCard game={game} />
         </aside>
         <section class="center">
-          <Stage game={game} sfx={sfx} />
+          {/* Renderer.create bakes the map's size and wall layout into the canvas once, at
+           * construction (StreetLayer's background is a static Graphics built from game.state at
+           * that moment). A key on the match's own district forces Preact to throw away the old
+           * canvas and mount a fresh one — recreating Pixi's WebGL context on the *same* canvas
+           * element instead isn't reliable everywhere — so starting a new match on a different
+           * district always gets a background that actually matches it, not whatever district
+           * was loaded when the page first opened. */}
+          <Stage key={game.state.rules.district.id} game={game} sfx={sfx} />
           <PlanBar game={game} />
           <Actions game={game} />
           <RazorActions game={game} />
