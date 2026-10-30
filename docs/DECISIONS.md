@@ -96,3 +96,4 @@ Structure and rules:
 - 2026-10-27 · The PiP inset is a Pixi `RenderTexture` of the street layer, cropped around Kade's body, drawn only while the Net is at least half visible.
 - 2026-10-27 · The Phase 1 chromatic jitter is now an RGB-split filter on the street layer for 120 ms every 4 s while overload is above 75 %. `Motion: system / reduced / full` is a user preference that overrides `prefers-reduced-motion`.
 - 2026-10-27 · Rain is a scrolling tiling sprite of one small pre-generated streak texture, not 140 individual particles.
+- 2026-10-30 · UX fix: breaking the last ICE layer doesn't open whatever it was guarding — Kade still has to route onto the ICE node first, one hop away from where the hack was cast. That extra step wasn't telegraphed, so a broken-but-uncrossed ICE node now gets a "CLEAR — ROUTE THROUGH" label and the same target brackets a hack gets, in `packages/client/src/renderer/net.ts`, until Kade actually steps onto it.

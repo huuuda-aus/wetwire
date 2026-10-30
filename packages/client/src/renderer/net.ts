@@ -121,6 +121,11 @@ export class NetLayer {
             .rect(centre(def.x) - 8 + i * 10, centre(def.y) - 25, 6, 6)
             .fill(i < s.ice ? COLORS.crim : 0x444444);
         }
+        // Broken ICE doesn't open anything behind it by itself — Kade still has to route onto
+        // its node before whatever it was guarding becomes reachable. Spells that out instead of
+        // leaving the player to notice the missing unlock command on their own.
+        if (s.ice === 0 && s.kade.node !== def.id)
+          this.labels.put('CLEAR — ROUTE THROUGH', centre(def.x), centre(def.y) + 36, COLORS.own, 8);
       }
     }
     const k = s.kade;
@@ -186,7 +191,8 @@ export class NetLayer {
       return s.rules.nodes[a.target] ?? s.hunters.find((h) => h.id === a.target) ?? null;
     };
     for (const a of this.game.legalKade) {
-      const p = isHack(a) ? pos(a) : null;
+      const clearedIce = a.type === 'route' && s.rules.nodes[a.target]?.type === 'ice' && s.ice === 0;
+      const p = isHack(a) || clearedIce ? pos(a) : null;
       if (p) brackets(g, centre(p.x), centre(p.y), 17);
     }
     g.stroke({ width: 2, color: COLORS.own, alpha: 0.55 });
