@@ -28,6 +28,21 @@ body {
     monospace;
   min-height: 100vh;
 }
+/* Below the stacking breakpoint the page scrolls normally (see .layout's own media query);
+ * above it, the whole app pins to the viewport and each panel scrolls on its own instead.
+ * #app, not body, is .top/.layout's real parent (see index.html) — it has to be the flex
+ * column for their flex: 0/1 auto rules to mean anything. */
+@media (min-width: 1101px) {
+  body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  #app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
 button {
   font: inherit;
   color: inherit;
@@ -49,6 +64,7 @@ button {
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
   background: var(--panel);
+  flex: 0 0 auto;
 }
 .logo {
   font-size: 28px;
@@ -154,8 +170,19 @@ button {
   grid-template-columns: 250px minmax(0, 1fr) 280px;
   gap: 14px;
   padding: 14px 16px;
-  max-width: 1560px;
-  margin: 0 auto;
+  width: 100%;
+}
+@media (min-width: 1101px) {
+  .layout {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .left,
+  .center,
+  .right {
+    min-height: 0;
+    overflow-y: auto;
+  }
 }
 .left {
   display: flex;
@@ -297,6 +324,8 @@ button {
 }
 .center {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .stage {
   position: relative;
@@ -304,10 +333,25 @@ button {
   aspect-ratio: 704/484;
   background: #000;
   border: 1px solid var(--line);
+  overflow: hidden;
+}
+@media (min-width: 1101px) {
+  .stage {
+    /* Fills whatever height .center has left over, instead of being purely width-driven.
+     * flex-basis 0 sizes it from the available space alone, ignoring its own aspect-ratio's
+     * content size, which is what let it overflow .center before; the canvas inside still
+     * keeps the true 704:484 ratio via object-fit. */
+    flex: 1 1 0;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
 }
 .stage canvas#view {
+  /* object-fit letterboxes the canvas to the box above instead of stretching it, so the map
+   * keeps its 704:484 pixel ratio at any window size. */
   width: 100%;
   height: 100%;
+  object-fit: contain;
   display: block;
   touch-action: manipulation;
 }
@@ -398,6 +442,15 @@ button {
   gap: 8px;
   margin-top: 10px;
 }
+/* Wren's move list (always 10 buttons) and Kade's hack list (count varies with position) wrap to
+ * a different number of rows depending on view and window width. .stage sizes itself from
+ * whatever .center has left (see the min-width:1101px rules above), so letting this box's height
+ * follow its content made the map visibly resize on every Street <-> Net switch. Reserving two
+ * rows' worth up front (measured: 35px button height, 8px gap) keeps it constant either way.
+ * Razor's own row isn't view-dependent, so it's excluded — this isn't the one that was moving. */
+.actions:not(.razoracts) {
+  min-height: 78px;
+}
 .actions button {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -486,6 +539,13 @@ button {
   text-transform: uppercase;
   color: var(--mute);
   font-weight: 500;
+}
+.minimap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 236 / 160;
+  border: 1px solid var(--line);
 }
 #log {
   list-style: none;

@@ -3,59 +3,26 @@ import { Container, Graphics } from 'pixi.js';
 import { COLORS, TILE } from './draw.ts';
 import { routeInfo } from '../scouting.ts';
 
-const CORNER_MAX_W = 160;
-const CORNER_MAX_H = 112;
-const CORNER_MARGIN = 10;
-const EXPANDED_MARGIN = 28;
+const MARGIN = 6;
 
 /**
- * Full-map overview. No fog of war exists yet (Phase 3 — `viewFor` is still a pass-through, see
- * docs/DECISIONS.md), so showing the whole layout, hunters and cameras here leaks nothing a
- * single-player client doesn't already have. Revisit the content of this view once fog ships.
+ * Full-map overview, docked at a fixed size at the top of the right sidebar (its own small Pixi
+ * Application — see ui/Minimap.tsx — not an inset on the main stage). No fog of war exists yet
+ * (Phase 3 — `viewFor` is still a pass-through, see docs/DECISIONS.md), so showing the whole
+ * layout, hunters and cameras here leaks nothing a single-player client doesn't already have.
+ * Revisit the content of this view once fog ships.
  */
 export class Minimap {
   readonly root = new Container();
   private readonly tiles = new Graphics();
   private readonly markers = new Graphics();
-  private readonly backdrop = new Graphics();
   private lastVersion = -1;
-  private expanded = false;
-  private readonly mapW: number;
-  private readonly mapH: number;
-  private readonly viewW: number;
-  private readonly viewH: number;
 
   constructor(mapW: number, mapH: number, viewW: number, viewH: number) {
-    this.mapW = mapW;
-    this.mapH = mapH;
-    this.viewW = viewW;
-    this.viewH = viewH;
-    this.backdrop.visible = false;
     this.root.addChild(this.tiles, this.markers);
-    this.layout();
-  }
-
-  setExpanded(expanded: boolean): void {
-    this.expanded = expanded;
-    this.backdrop.visible = expanded;
-    this.layout();
-  }
-
-  isExpanded(): boolean {
-    return this.expanded;
-  }
-
-  private layout(): void {
-    const marginedW = this.expanded ? this.viewW - EXPANDED_MARGIN * 2 : CORNER_MAX_W;
-    const marginedH = this.expanded ? this.viewH - EXPANDED_MARGIN * 2 : CORNER_MAX_H;
-    const scale = Math.min(marginedW / this.mapW, marginedH / this.mapH);
+    const scale = Math.min((viewW - MARGIN * 2) / mapW, (viewH - MARGIN * 2) / mapH);
     this.root.scale.set(scale);
-    if (this.expanded) {
-      this.root.position.set((this.viewW - this.mapW * scale) / 2, (this.viewH - this.mapH * scale) / 2);
-    } else {
-      // Top-right: the PiP inset already owns the bottom-right corner.
-      this.root.position.set(this.viewW - this.mapW * scale - CORNER_MARGIN, CORNER_MARGIN);
-    }
+    this.root.position.set((viewW - mapW * scale) / 2, (viewH - mapH * scale) / 2);
   }
 
   /** Rebuilds only when `game.version` changed — wall layout is fixed, but door state (and so
@@ -99,12 +66,5 @@ export class Minimap {
     for (const cam of state.cams) dot(cam.x, cam.y, COLORS.net, TILE * 0.18);
     for (const h of state.hunters) dot(h.x, h.y, COLORS.crim);
     dot(state.wren.x, state.wren.y, COLORS.amber, TILE * 0.35);
-  }
-
-  /** Dims the rest of the view while expanded, drawn in view space (not map space, unlike the
-   * other graphics here), so it must be added to the stage separately from `root`. */
-  buildBackdrop(): Graphics {
-    this.backdrop.rect(0, 0, this.viewW, this.viewH).fill({ color: COLORS.ink, alpha: 0.7 });
-    return this.backdrop;
   }
 }

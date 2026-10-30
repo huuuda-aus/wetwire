@@ -30,7 +30,6 @@ export function attachKeyboard(game: Game, sfx: Sfx, blocked: () => boolean): ()
     } else if (key === 'm') game.setWrenAction({ type: 'mask' });
     else if (key === 'x') game.setWrenAction({ type: 'wait' });
     else if (key === 'q') game.setView(game.view === 'net' ? 'street' : 'net');
-    else if (key === 'v') game.setOverview(!game.overview);
     else if (/^[1-9]$/.test(key)) {
       if (game.view === 'net') game.setKadeAction(game.legalKade[Number(key) - 1]);
     } else if ((key === ' ' || key === 'enter') && !onControl) {

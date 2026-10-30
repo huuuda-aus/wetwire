@@ -94,9 +94,6 @@ export function TopBar({ game, sfx, onBrief }: { game: Game; sfx: Sfx; onBrief: 
           Net (Q)
         </button>
       </div>
-      <button class="btn" aria-pressed={game.overview} onClick={() => game.setOverview(!game.overview)}>
-        Overview (V)
-      </button>
       <button class="btn" onClick={onBrief}>
         Brief
       </button>
