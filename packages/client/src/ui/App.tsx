@@ -5,6 +5,7 @@ import { attachKeyboard } from '../input.ts';
 import { Actions, Dpad, PlanBar, RazorActions, TopBar } from './Controls.tsx';
 import { useGame } from './hooks.ts';
 import { EndOverlay, StartOverlay } from './Overlays.tsx';
+import { Minimap } from './Minimap.tsx';
 import { KadeCard, Legend, LogPanel, RazorCard, WrenCard } from './Panels.tsx';
 import { Stage } from './Stage.tsx';
 import { Tutorial } from './Tutorial.tsx';
@@ -55,6 +56,7 @@ export function App() {
           <Dpad game={game} />
         </section>
         <aside class="right">
+          <Minimap game={game} />
           <LogPanel game={game} />
           <Legend />
         </aside>

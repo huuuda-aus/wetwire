@@ -442,6 +442,15 @@ button {
   gap: 8px;
   margin-top: 10px;
 }
+/* Wren's move list (always 10 buttons) and Kade's hack list (count varies with position) wrap to
+ * a different number of rows depending on view and window width. .stage sizes itself from
+ * whatever .center has left (see the min-width:1101px rules above), so letting this box's height
+ * follow its content made the map visibly resize on every Street <-> Net switch. Reserving two
+ * rows' worth up front (measured: 35px button height, 8px gap) keeps it constant either way.
+ * Razor's own row isn't view-dependent, so it's excluded — this isn't the one that was moving. */
+.actions:not(.razoracts) {
+  min-height: 78px;
+}
 .actions button {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -530,6 +539,13 @@ button {
   text-transform: uppercase;
   color: var(--mute);
   font-weight: 500;
+}
+.minimap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 236 / 160;
+  border: 1px solid var(--line);
 }
 #log {
   list-style: none;

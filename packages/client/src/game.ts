@@ -45,8 +45,6 @@ export class Game {
   state: MatchState;
   plan: Plan = freshPlan();
   view: View = 'street';
-  /** Full-map overview toggle (scouting); transient UI state, not persisted across reload. */
-  overview = false;
   log: GameEvent[] = [];
   legalWren: CourierAction[] = [];
   legalKade: DeckerAction[] = [];
@@ -134,12 +132,6 @@ export class Game {
     this.version += 1;
     for (const fn of this.listeners) fn();
     if (this.running) this.persist();
-  }
-
-  setOverview(overview: boolean): void {
-    this.overview = overview;
-    this.version += 1;
-    for (const fn of this.listeners) fn();
   }
 
   setWrenAction(a: CourierAction | undefined): void {
