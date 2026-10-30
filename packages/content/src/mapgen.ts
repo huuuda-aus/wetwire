@@ -38,21 +38,46 @@ function carveRoom(grid: string[][], room: Room): void {
   }
 }
 
-function carveCorridor(grid: string[][], from: { x: number; y: number }, to: { x: number; y: number }): void {
+/** Same traversal `carveCorridor` carves (horizontal leg, then vertical), so a tile picked from
+ * this list is guaranteed to actually be on the corridor it names. */
+function corridorPath(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): { x: number; y: number }[] {
+  const path: { x: number; y: number }[] = [];
   let x = from.x;
   let y = from.y;
   while (x !== to.x) {
-    const row = grid[y];
-    if (row) row[x] = '.';
+    path.push({ x, y });
     x += x < to.x ? 1 : -1;
   }
   while (y !== to.y) {
-    const row = grid[y];
-    if (row) row[x] = '.';
+    path.push({ x, y });
     y += y < to.y ? 1 : -1;
   }
-  const row = grid[y];
-  if (row) row[x] = '.';
+  path.push({ x, y });
+  return path;
+}
+
+function carveCorridor(grid: string[][], from: { x: number; y: number }, to: { x: number; y: number }): void {
+  for (const { x, y } of corridorPath(from, to)) {
+    const row = grid[y];
+    if (row) row[x] = '.';
+  }
+}
+
+/** True where (x, y) is a strict one-tile-wide chokepoint: open on exactly one opposite pair of
+ * sides (east-west or north-south) and walled on the other pair. A door anywhere else — e.g. a
+ * corridor tile that also has an open neighbour perpendicular to its direction of travel, because
+ * it sits at a room's edge — can simply be walked around, making it pointless. */
+function isChoke(grid: string[][], x: number, y: number): boolean {
+  const open = (px: number, py: number): boolean => grid[py]?.[px] !== '#' && grid[py]?.[px] !== undefined;
+  const horizOpen = open(x - 1, y) && open(x + 1, y);
+  const vertOpen = open(x, y - 1) && open(x, y + 1);
+  if (horizOpen && vertOpen) return false; // a 4-way junction, not a chokepoint
+  if (horizOpen) return !open(x, y - 1) && !open(x, y + 1); // walled top and bottom too
+  if (vertOpen) return !open(x - 1, y) && !open(x + 1, y); // walled left and right too
+  return false; // not actually passing through in either direction
 }
 
 /** Lays out rooms on a fixed grid of blocks, one room per block, so sequential corridor
@@ -128,7 +153,9 @@ export function generateDistrict(seed: number, options: MapgenOptions = {}): Dis
   if (rRow) rRow[receiver.x] = 'R';
 
   // Doors: one per room-to-room corridor join (up to 2), so the map always has at least one
-  // lockable passage, matching the hand-authored districts' style.
+  // lockable passage, matching the hand-authored districts' style. Placed on an actual one-tile
+  // chokepoint along that corridor, not just its raw midpoint — a door at a room's edge, where a
+  // second open tile runs alongside it, can simply be walked around and locks nothing.
   const doorCount = Math.min(2, rooms.length - 1);
   const doors: District['doors'] = [];
   for (let i = 0; i < doorCount; i++) {
@@ -138,10 +165,21 @@ export function generateDistrict(seed: number, options: MapgenOptions = {}): Dis
     const ca = roomCenter(a);
     const cb = roomCenter(b);
     const mid = { x: Math.round((ca.x + cb.x) / 2), y: Math.round((ca.y + cb.y) / 2) };
-    const row = grid[mid.y];
-    if (row && row[mid.x] !== '#' && row[mid.x] !== 'S' && row[mid.x] !== 'T' && row[mid.x] !== 'R') {
-      row[mid.x] = 'D';
-      doors.push({ id: `DR${i + 1}`, name: `DOOR-${i + 1}`, x: mid.x, y: mid.y });
+    const candidates = corridorPath(ca, cb).filter(({ x, y }) => {
+      const t = grid[y]?.[x];
+      return t === '.' && isChoke(grid, x, y);
+    });
+    candidates.sort(
+      (p, q) =>
+        Math.abs(p.x - mid.x) + Math.abs(p.y - mid.y) - (Math.abs(q.x - mid.x) + Math.abs(q.y - mid.y)),
+    );
+    const spot = candidates[0];
+    if (spot) {
+      const row = grid[spot.y];
+      if (row) {
+        row[spot.x] = 'D';
+        doors.push({ id: `DR${i + 1}`, name: `DOOR-${i + 1}`, x: spot.x, y: spot.y });
+      }
     }
   }
 
