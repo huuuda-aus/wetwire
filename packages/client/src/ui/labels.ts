@@ -55,3 +55,4 @@ export function razorLabel(a: RazorAction): string {
 }
 
 export const MOVE_KEYS = ['W', 'D', 'S', 'A'] as const;
+export const RAZOR_MOVE_KEYS = ['I', 'L', 'K', 'J'] as const;

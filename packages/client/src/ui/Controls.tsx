@@ -4,7 +4,7 @@ import type { Sfx } from '../audio.ts';
 import type { Game } from '../game.ts';
 import type { MotionPref } from '../prefs.ts';
 import { routeInfo } from '../scouting.ts';
-import { MOVE_KEYS, courierLabel, deckerLabel, razorLabel } from './labels.ts';
+import { MOVE_KEYS, RAZOR_MOVE_KEYS, courierLabel, deckerLabel, razorLabel } from './labels.ts';
 
 const RING = 62.8;
 
@@ -203,7 +203,9 @@ export function Dpad({ game }: { game: Game }) {
 }
 
 /** Razor's own small action row: always visible (she shares the Street layer with Wren but has
- * no view of her own), buttons only — no dedicated keymap yet, that's follow-up work. */
+ * no view of her own). Movement has its own keys (IJKL); everything else reuses the same
+ * list-index scheme as Kade's Net-view hacks (1-9 picks the Nth currently-legal action) since
+ * it's only ever offered in Street view, where those digits are otherwise unused. */
 export function RazorActions({ game }: { game: Game }) {
   const { plan } = game;
   if (game.state.razor.body <= 0) return null;
@@ -211,6 +213,7 @@ export function RazorActions({ game }: { game: Game }) {
     <div class="actions razoracts" aria-label="Razor's actions">
       {game.legalRazor.map((a, i) => (
         <button key={i} class={sameAction(a, plan.razor) ? 'sel' : ''} onClick={() => game.setRazorAction(a)}>
+          <kbd>{a.type === 'move' ? RAZOR_MOVE_KEYS[a.dir] : i + 1}</kbd>
           {razorLabel(a)}
         </button>
       ))}
