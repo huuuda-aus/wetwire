@@ -46,3 +46,17 @@ No `balance.json` number was changed to tune this; recording it because CLAUDE.m
 **What this does and doesn't tell us:** it confirms Sprint's addition didn't silently break anything (no crash, no illegal state, the existing golden/parity/property tests all still pass) — but it is **not** a measurement of whether Sprint, Heavy strike or Guard are themselves well-balanced. Nothing in `tools/balance` ever _chooses_ to use them deliberately; the only way they appear in a simulated match is as one of several equally-likely random mistakes. Real balance testing for these three needs a bot that can decide to Sprint to close a gap, Heavy strike instead of Strike when it has a free tick, or Guard when an ally's about to be hit — none of which exists yet. I did not build that bot for this slice (it's a meaningfully sized tool in its own right); flagging it rather than presenting this table as proof of anything about the new kit pieces.
 
 **Not re-tuned to restore the old numbers.** Changing the bot's mistake-weighting to exclude Sprint would hide this finding, not resolve it, so I left it as discovered.
+
+## 2026-10-30 · `net.blindTicks` 4 → 8 — re-detection felt instant, by player request
+
+A camera blinded by Kade re-armed after 4 ticks, but Kade can only land one hack per tick and often has to route back to the cam's node first; by the time he's back in range the cam is usually already live again, so a blind rarely bought a second chance. Doubled the window so one blind reliably covers the time it takes to act on it.
+
+| Payload  | Delivered (before) | Delivered (after) | Target  | Verdict (after)            |
+| -------- | ------------------ | ----------------- | ------- | -------------------------- |
+| Light    | 80.0 %             | 84.8 %            | ≥ 85 %  | OUT OF BAND (closer)       |
+| Standard | 75.4 %             | 80.7 %            | 55–75 % | OUT OF BAND (further over) |
+| Heavy    | 67.7 %             | 70.9 %            | 25–45 % | OUT OF BAND (further over) |
+
+(2000 matches/payload, same bot skill as above: `wrenMistake 0.08`, `kadeLapse 0.10`.) Alerts-per-match and Taken-rate fell for every payload (e.g. standard alerts 2.72 → 1.95, taken 15.3% → 9.4%), consistent with the mechanism working as intended: fewer cameras re-spot Wren before she's clear.
+
+**Recorded as intended, by explicit director instruction**, not discovered as a side-effect. All three payloads were already outside their Phase-1 bands before this change (see the two entries above — an unresolved, unrelated baseline issue). This change moves Light closer to its band and Standard/Heavy further over theirs; it does not fix or worsen the underlying cause, which is still the bot-skill/target-band mismatch described above.

@@ -248,7 +248,7 @@ const Sim = (() => {
     overloadMax: 100,
     maskCost: 10,
     wrenBody: 3, kadeBody: 2,
-    cam: { range: 6, cos: 0.8, blindTicks: 4, turnEvery: 2 },
+    cam: { range: 6, cos: 0.8, blindTicks: 8, turnEvery: 2 },
     hunter: { sight: 4.5, memory: 6, stunTicks: 2, hitDamage: 1 },
     net: {
       decay: { load: 6, trace: 2 },
@@ -258,7 +258,7 @@ const Sim = (() => {
         ice:    { load: 15, trace: 10 },
         burn:   { load: 30, trace: 25 },
       },
-      burnRange: 4, blindTicks: 4, burnStun: 2, iceLayers: 2,
+      burnRange: 4, blindTicks: 8, burnStun: 2, iceLayers: 2,
       loadMax: 100, traceMax: 100,
       overloadShock: 3, loadAfterShock: 60,
       bodyHitShock: 4, bodyHitLoadFloor: 70,

@@ -17,7 +17,7 @@
     },
     "burnRange": 4,
     "bodyThreatRange": 4,
-    "blindTicks": 4,
+    "blindTicks": 8,
     "burnStun": 2,
     "iceLayers": 2,
     "loadMax": 100,

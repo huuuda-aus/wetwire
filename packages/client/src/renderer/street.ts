@@ -13,6 +13,10 @@ import { Container, Graphics, Text, Texture, TilingSprite } from 'pixi.js';
 import type { Game } from '../game.ts';
 import { COLORS, FONT, LabelPool, TAU, TILE, arcPath, arrow, centre, diamond } from './draw.ts';
 
+/** A blinded camera gets a plain "about to expire" warning once this few ticks are left,
+ * so re-blinding (or getting clear) doesn't come down to memorising the countdown number. */
+const BLIND_WARN_TICKS = 2;
+
 /** Small deterministic PRNG for static art only; the sim never sees it. */
 function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -108,6 +112,7 @@ export class StreetLayer {
   private readonly hunters = new Map<string, HunterView>();
   private readonly beacon = [new Graphics(), new Graphics()];
   private readonly kadeRing = new Graphics();
+  private readonly camWarn = new Graphics();
   private readonly rain: TilingSprite;
   private readonly effects: { g: Graphics; t0: number; dur: number; kind: string }[] = [];
   private flashUntil = new Map<string, number>();
@@ -121,7 +126,7 @@ export class StreetLayer {
     this.reduce = reduce;
     this.root.addChild(buildBackground(game.state, width, height), this.overlay);
     for (const b of this.beacon) this.root.addChild(b);
-    this.root.addChild(this.kadeRing, this.unitLayer, this.fxLayer);
+    this.root.addChild(this.kadeRing, this.camWarn, this.unitLayer, this.fxLayer);
     this.labels = new LabelPool(this.root);
     this.wrenTag = new Text({
       text: 'WREN',
@@ -302,12 +307,14 @@ export class StreetLayer {
         cam.blind ? 0x444444 : COLORS.ink,
       );
       if (cam.blind) {
+        const expiring = cam.blind <= BLIND_WARN_TICKS;
+        const color = expiring ? COLORS.amber : COLORS.own;
         g.moveTo(x - 7, y - 7)
           .lineTo(x + 7, y + 7)
           .moveTo(x + 7, y - 7)
           .lineTo(x - 7, y + 7)
-          .stroke({ width: 2, color: COLORS.own });
-        this.labels.put(`BLIND ${cam.blind}`, x, y - 13, COLORS.own, 8);
+          .stroke({ width: 2, color });
+        this.labels.put(`BLIND ${cam.blind}`, x, y - 13, color, 8);
       }
     });
   }
@@ -474,6 +481,7 @@ export class StreetLayer {
     );
     this.kadeRing.visible = threat && !s.kade.flat;
     this.kadeRing.alpha = slow ? 0.8 : 0.5 + 0.4 * Math.sin(now / 160);
+    this.updateCamWarn(s, now, slow);
     this.rain.visible = !slow;
     if (!slow) {
       this.rain.tilePosition.y += 6;
@@ -481,6 +489,21 @@ export class StreetLayer {
     }
     this.updateEffects(now);
     if (this.flashing && !this.isFlashing(now)) this.rebuild(now);
+  }
+
+  /** Pulsing ring around a camera about to re-arm, so an expiring blind reads at a glance
+   * instead of requiring a read of the "BLIND N" countdown label. */
+  private updateCamWarn(s: MatchState, now: number, slow: boolean): void {
+    this.camWarn.clear();
+    const alpha = slow ? 0.7 : 0.4 + 0.5 * Math.abs(Math.sin(now / 220));
+    for (const cam of s.cams) {
+      if (cam.blind === 0 || cam.blind > BLIND_WARN_TICKS) continue;
+      this.camWarn.circle(centre(cam.x), centre(cam.y), 14).stroke({
+        width: 2,
+        color: COLORS.amber,
+        alpha,
+      });
+    }
   }
 
   private updateEffects(now: number): void {
