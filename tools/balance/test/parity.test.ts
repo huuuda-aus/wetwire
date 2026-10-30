@@ -93,12 +93,16 @@ describe('Phase 2 sim matches the Phase 1 sim', () => {
           expect(project(b)).toEqual(project(a));
           for (const [wi, ki] of picks) {
             if (b.status !== 'play') break;
-            // Phase 2 has grown actions Phase 1 never had (Sprint, Lock, Razor); this test is
-            // only about proving the original Phase 1 behaviour never silently drifted, so it
-            // picks only from the action set Phase 1 actually offered. New actions get their
-            // own tests in packages/sim/test/sim.test.ts.
-            const phase1Wren = legalActions(b, WREN).filter((x) => x.type !== 'sprint');
-            const phase1Kade = legalActions(b, KADE).filter((x) => x.type !== 'lock');
+            // Phase 2 has grown actions Phase 1 never had (Sprint, Lock, Razor, Takedown,
+            // Distract); this test is only about proving the original Phase 1 behaviour never
+            // silently drifted, so it picks only from the action set Phase 1 actually offered.
+            // New actions get their own tests in packages/sim/test/sim.test.ts.
+            const phase1Wren = legalActions(b, WREN).filter(
+              (x) => x.type !== 'sprint' && x.type !== 'takedown',
+            );
+            const phase1Kade = legalActions(b, KADE).filter(
+              (x) => x.type !== 'lock' && x.type !== 'distract',
+            );
             const wren = pick(phase1Wren, wi) ?? { type: 'wait' as const };
             const kade = pick(phase1Kade, ki) ?? { type: 'hold' as const };
             const ra = phase1.resolveTick(a, wren, kade);

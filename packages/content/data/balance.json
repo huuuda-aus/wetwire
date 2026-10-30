@@ -13,13 +13,16 @@
       "blind": { "load": 15, "trace": 12 },
       "unlock": { "load": 20, "trace": 15 },
       "ice": { "load": 15, "trace": 10 },
-      "burn": { "load": 30, "trace": 25 }
+      "burn": { "load": 30, "trace": 25 },
+      "distract": { "load": 12, "trace": 10 }
     },
     "burnRange": 4,
     "bodyThreatRange": 4,
     "blindTicks": 8,
     "burnStun": 2,
     "iceLayers": 2,
+    "distractRange": 5,
+    "distractTicks": 5,
     "loadMax": 100,
     "traceMax": 100,
     "overloadShock": 3,

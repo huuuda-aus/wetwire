@@ -23,6 +23,8 @@ export function deckerLabel(s: MatchState, a: DeckerAction): string {
       return 'Break ICE';
     case 'burn':
       return `Burn implants · ${a.target}`;
+    case 'distract':
+      return `Decoy alarm · ${node(a.target)}`;
   }
 }
 
@@ -36,6 +38,8 @@ export function courierLabel(a: CourierAction): string {
       return 'Mask (+10 overload)';
     case 'wait':
       return 'Wait';
+    case 'takedown':
+      return `Takedown ${a.target} (2-tick wind-up)`;
   }
 }
 
@@ -55,3 +59,4 @@ export function razorLabel(a: RazorAction): string {
 }
 
 export const MOVE_KEYS = ['W', 'D', 'S', 'A'] as const;
+export const RAZOR_MOVE_KEYS = ['I', 'L', 'K', 'J'] as const;

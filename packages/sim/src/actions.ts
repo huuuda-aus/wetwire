@@ -19,6 +19,9 @@ export const RAZOR: PlayerId = 'razor';
 const DIRS4: readonly Dir[] = [0, 1, 2, 3];
 
 export function legalCourierActions(s: MatchState): CourierAction[] {
+  // Mid-takedown: locked in, same pattern as Razor's heavy strike. Resolves on its own in
+  // stepWren regardless of what's requested.
+  if (s.wren.windup) return [{ type: 'wait' }];
   const open = DIRS4.filter((d) => {
     const [dx, dy] = dirVec(d);
     return !isWall(s.rules, s.wren.x + dx, s.wren.y + dy);
@@ -27,7 +30,13 @@ export function legalCourierActions(s: MatchState): CourierAction[] {
   // Offered on the same condition as a plain move; whether the second tile also clears is
   // resolved at tick time (steps.ts), same as a move can bump a locked door.
   const sprints: CourierAction[] = open.map((dir) => ({ type: 'sprint', dir }));
-  return [...moves, ...sprints, { type: 'wait' }, { type: 'mask' }];
+  // Unaware only: a hunter already in 'hunt' mode has seen or heard something and is on guard,
+  // too alert for a quiet takedown.
+  const targets = s.hunters.filter(
+    (h) => !h.defeated && h.stun === 0 && h.mode !== 'hunt' && manhattan(h, s.wren) <= 1,
+  );
+  const takedowns: CourierAction[] = targets.map((h) => ({ type: 'takedown', target: h.id }));
+  return [...moves, ...sprints, { type: 'wait' }, { type: 'mask' }, ...takedowns];
 }
 
 export function legalRazorActions(s: MatchState): RazorAction[] {
@@ -69,6 +78,8 @@ export function legalDeckerActions(s: MatchState): DeckerAction[] {
       else locks.push({ type: 'lock', target: id });
     }
     if (def.type === 'ice' && s.ice > 0) hacks.push({ type: 'ice', target: id });
+    // Any reachable node works as a decoy — a fake alarm doesn't need the node to be a camera.
+    hacks.push({ type: 'distract', target: id });
   }
   for (const h of s.hunters) {
     if (h.stun === 0 && manhattan(here, h) <= s.rules.balance.net.burnRange)
@@ -89,7 +100,7 @@ export function legalActions(s: MatchState, player: PlayerId): Action[] {
 }
 
 export const isHack = (a: Action): a is HackAction =>
-  a.type === 'blind' || a.type === 'unlock' || a.type === 'ice' || a.type === 'burn';
+  a.type === 'blind' || a.type === 'unlock' || a.type === 'ice' || a.type === 'burn' || a.type === 'distract';
 
 /** Neural cost of a hack, or null for actions that are free. */
 export function costOf(s: MatchState, a: Action): Cost | null {
